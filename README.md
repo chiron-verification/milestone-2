@@ -16,12 +16,19 @@ This repository contains the implementation of a verifier for Chiron IR using Co
 ## Steps 
 - [x] **Variable Name Detection in Chiron IR**: 
     - Code File : `Chiron-Framework/ChironCore/CHC_Verification/variable_name_detection_in_IR.py`
-        - Input : Command line arguments to input source Turtle file.
-        - Output : Pretty prints the symbol table and the counter table for the variables in the Chiron IR.
+        - Input : A Chiron IR Object.
+        - Output : Pretty prints the symbol table and the counter table for the variables in the Chiron IR. Returns the symbol table and counter table.
         - ``getParseTree`` function is used to parse the input Turtle file and generate the parse tree.
         - ``astGenPass`` function converts ANTLR parse tree into a flat list of (command, offset) used as linear IR.
         - ``parse_variables_from_ir`` function extracts variable names from the linear IR and populates the symbol table and counter table.
     - Test file : `test_files/check_symbol_table_and_counter_table`
+- [x] **Z3 Fixed Point Function Signature**:
+    - Code File : `Chiron-Framework/ChironCore/CHC_Verification/z3_fixed_point.py`
+        - Input : A Chiron IR Object.
+        - Output : A Z3 Fixed Point object with the appropriate function signatures for the CHC verification. Tuples for state and next_state.
+        - ``parse_variables_from_ir`` function is reused to get the symbol table and counter table for the variables in the Chiron IR.
+        - ``z3_fixed_point_invariant_generation`` function creates a Z3 Fixed Point object and defines the function signatures for the state and next_state predicates based on the variables in the symbol table and counter table.
+    
 
 
 
