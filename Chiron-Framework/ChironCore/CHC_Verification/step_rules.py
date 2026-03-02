@@ -58,10 +58,16 @@ def chiron_expr_to_z3(expr, fp, Inv, state, next_state, symbol_table, counter_ta
                 return chiron_expr_to_z3(lexpr, fp, Inv, state, next_state, symbol_table, counter_table) * chiron_expr_to_z3(rexpr, fp, Inv, state, next_state, symbol_table, counter_table)
             elif isinstance(expr, ChironAST.Div):
                 return chiron_expr_to_z3(lexpr, fp, Inv, state, next_state, symbol_table, counter_table) / chiron_expr_to_z3(rexpr, fp, Inv, state, next_state, symbol_table, counter_table)
+            else:
+                print(f"Error: Unrecognized BinArithOp type: {type(expr)}")
+                sys.exit(1)
         elif isinstance(expr, ChironAST.UnaryArithOp):
             if isinstance(expr, ChironAST.UMinus):
                 lexpr = expr.expr
                 return -chiron_expr_to_z3(lexpr, fp, Inv, state, next_state, symbol_table, counter_table)
+            else:
+                print(f"Error: Unrecognized UnaryArithOp type: {type(expr)}")
+                sys.exit(1)
     elif isinstance(expr, ChironAST.BoolExpr):
         if isinstance(expr, ChironAST.BinCondOp):
             lexpr = expr.lexpr
@@ -82,6 +88,9 @@ def chiron_expr_to_z3(expr, fp, Inv, state, next_state, symbol_table, counter_ta
                 return chiron_expr_to_z3(lexpr, fp, Inv, state, next_state, symbol_table, counter_table) == chiron_expr_to_z3(rexpr, fp, Inv, state, next_state, symbol_table, counter_table)
             elif isinstance(expr, ChironAST.NEQ):
                 return chiron_expr_to_z3(lexpr, fp, Inv, state, next_state, symbol_table, counter_table) != chiron_expr_to_z3(rexpr, fp, Inv, state, next_state, symbol_table, counter_table)
+            else:
+                print(f"Error: Unrecognized BinCondOp type: {type(expr)}")
+                sys.exit(1)
         elif isinstance(expr, ChironAST.NOT):
             expr = expr.expr
             return Not(chiron_expr_to_z3(expr, fp, Inv, state, next_state, symbol_table, counter_table))
@@ -91,6 +100,9 @@ def chiron_expr_to_z3(expr, fp, Inv, state, next_state, symbol_table, counter_ta
             return BoolVal(True)
         elif isinstance(expr, ChironAST.BoolFalse):
             return BoolVal(False)
+        else:
+            print(f"Error: Unrecognized BoolExpr type: {type(expr)}")
+            sys.exit(1)
     elif isinstance(expr, ChironAST.Value):
         if isinstance(expr, ChironAST.Num):
             return RealVal(expr.val) if isinstance(expr.val, float) else IntVal(expr.val)
@@ -104,6 +116,12 @@ def chiron_expr_to_z3(expr, fp, Inv, state, next_state, symbol_table, counter_ta
             else:
                 print("Error: Variable " + var_name + " not found in symbol table.")
                 sys.exit(1)
+        else:
+            print(f"Error: Unrecognized Value type: {type(expr)}")
+            sys.exit(1)
+    else:
+        print(f"Error: Unrecognized expression type: {type(expr)}")
+        sys.exit(1)
 
 def chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, state, next_state, symbol_table, counter_table):
 
@@ -167,7 +185,8 @@ def chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, state, next_state,
             return rule_true, rule_false
 
         else:
-            return rule_true, None
+            rule_false = Implies(And(Inv(*current_state), Not(cond)), BoolVal(False))
+            return rule_true, rule_false
         
     elif isinstance(instr, ChironAST.MoveCommand):
         next_pc = IntVal(i+1)
@@ -290,4 +309,4 @@ if __name__ == "__main__":
             print(f"Added rule for instruction at line {i} (false branch): {rule_false}")
 
         
-    print("Step rules added to fixedpoint object.The rules are :")
+    print("Step rules added to fixedpoint object.")
