@@ -19,7 +19,8 @@ def z3_fixed_point_object_with_start_state_set(ir, sanity_check=False):
         RealVal(0), # ycor
         RealVal(0), # heading
         BoolVal(False), # pendown
-        *[IntVal(0) for _ in range(len(state) - 5)] # user variables and loop counters initialized to 0
+        *[RealVal(0) for _ in symbol_table], # user variables initialized to 0
+        *[RealVal(0) for _ in counter_table]  # loop counters initialized to 0
     )
 
     fp.fact(Inv(*start_state))
@@ -37,8 +38,9 @@ def z3_fixed_point_object_with_start_state_set(ir, sanity_check=False):
             RealVal(1), # ycor
             RealVal(90), # heading
             BoolVal(True), # pendown
-            *[IntVal(0) for _ in range(len(state) - 5)] 
-        )   
+            *[RealVal(0) for _ in symbol_table],
+            *[RealVal(0) for _ in counter_table]
+        )
         result = fp.query(Inv(*non_start_state))
         assert result == unsat, "A non-start state should not satisfy the invariant relation."
         print("Verified that a non-start state does not satisfy the invariant relation.")

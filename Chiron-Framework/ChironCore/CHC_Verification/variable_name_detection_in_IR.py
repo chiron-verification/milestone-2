@@ -24,11 +24,11 @@ def add_to_symbol_table_or_counter_table(var_name, symbol_table, symbol_table_en
     # Handle loop counters separately to avoid name clashes with user-defined variables
     if var_name.startswith("__rep_counter"):
         counter_table_entry['counter_name'] = var_name
-        counter_table_entry['z3_var'] = Int(var_name)
+        counter_table_entry['z3_var'] = Real(var_name)
         counter_table[var_name] = counter_table_entry.copy()
     elif var_name not in symbol_table:
         symbol_table_entry['var_name'] = var_name
-        symbol_table_entry['z3_var'] = Int(var_name)
+        symbol_table_entry['z3_var'] = Real(var_name)
         symbol_table[var_name] = symbol_table_entry.copy()
 
 def parse_variables_from_ir_expr(expr, symbol_table, symbol_table_entry, counter_table, counter_table_entry):

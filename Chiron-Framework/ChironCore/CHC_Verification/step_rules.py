@@ -17,9 +17,9 @@ def trig_bounds(deg):
     sin_hi = max(lo, hi)
     return cos_lo, cos_hi, sin_lo, sin_hi
 
-def cos_sin_bounds_z3(h):
-    cos_h = Real('cos_h')
-    sin_h = Real('sin_h')
+def cos_sin_bounds_z3(h, i):
+    cos_h = Real(f'cos_h_{i}')
+    sin_h = Real(f'sin_h_{i}')
     constraints = [
         And(cos_h >= RealVal(-1), cos_h <= RealVal(1),
             sin_h >= RealVal(-1), sin_h <= RealVal(1))
@@ -105,7 +105,7 @@ def chiron_expr_to_z3(expr, fp, Inv, state, next_state, symbol_table, counter_ta
             sys.exit(1)
     elif isinstance(expr, ChironAST.Value):
         if isinstance(expr, ChironAST.Num):
-            return RealVal(expr.val) if isinstance(expr.val, float) else IntVal(expr.val)
+            return RealVal(expr.val)
         elif isinstance(expr, ChironAST.Var):
             var_name = expr.varname
             var_name = var_name[1:]
@@ -198,12 +198,12 @@ def chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, state, next_state,
         expr_z3 = chiron_expr_to_z3(expr, fp, Inv, state, next_state, symbol_table, counter_table)
 
         if direction == "forward":
-            cos_h, sin_h, trig_constraints = cos_sin_bounds_z3(state[3])
+            cos_h, sin_h, trig_constraints = cos_sin_bounds_z3(state[3], i)
             next_state_xcor = state[1] + expr_z3 * cos_h
             next_state_ycor = state[2] + expr_z3 * sin_h
             next_state_heading = state[3]
         elif direction == "backward":
-            cos_h, sin_h, trig_constraints = cos_sin_bounds_z3(state[3])
+            cos_h, sin_h, trig_constraints = cos_sin_bounds_z3(state[3], i)
             next_state_xcor = state[1] - expr_z3 * cos_h
             next_state_ycor = state[2] - expr_z3 * sin_h
             next_state_heading = state[3]
