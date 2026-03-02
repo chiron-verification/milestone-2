@@ -28,7 +28,12 @@ This repository contains the implementation of a verifier for Chiron IR using Co
         - Output : A Z3 Fixed Point object with the appropriate function signatures for the CHC verification. Tuples for state and next_state.
         - ``parse_variables_from_ir`` function is reused to get the symbol table and counter table for the variables in the Chiron IR.
         - ``z3_fixed_point_invariant_generation`` function creates a Z3 Fixed Point object and defines the function signatures for the state and next_state predicates based on the variables in the symbol table and counter table.
-    
-
+- [x] **Create Fixed Point Object and set Initial Conditions**:
+    - Code File : `Chiron-Framework/ChironCore/CHC_Verification/init_fixed_point.py`
+        - Input : A Chiron IR Object.
+        - Output : A Z3 Fixed Point object with the initial conditions set for the CHC verification.
+        - ``z3_fixed_point_invariant_generation`` function is used to set the signature for the state and next_state prediactes, as well as the ``Inv`` predicate.
+        - ``z3_fixed_point_object_with_start_state_set`` function initializes the Z3 Fixed Point object, registers the invariant relation, and adds the initial state fact to the fixed point object. It also includes sanity checks to verify that the initial state satisfies the invariant relation and that a non-start state does not satisfy the invariant relation.
+        
 
 

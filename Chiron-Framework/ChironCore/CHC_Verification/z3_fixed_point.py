@@ -8,6 +8,8 @@ from ChironAST import ChironAST
 def z3_fixed_point_invariant_generation(ir):
     symbol_table, counter_table = parse_variables_from_ir(ir)
 
+    print("\n========== Step 2 ==========")
+
     print("Obtained user variables and loop counters from the IR.")
     
     Inv = Function('Inv',

@@ -10,12 +10,12 @@ from ChironAST.builder import astGenPass
 from ChironAST import ChironAST
 
 def pretty_print_symbol_table(symbol_table):
-    print("\n========== Symbol Table ==========\n")
+    print("\n---------- Symbol Table (User Variables) ---------\n")
     for var_name, entry in symbol_table.items():
         print(f"Variable Name: {entry['var_name']}, Z3 Variable: {entry['z3_var']}")
 
 def pretty_print_counter_table(counter_table):
-    print("\n========== Loop Counter Table ==========\n")
+    print("\n---------- Counter Table (Loop Counters) ---------\n")
     for counter_name, entry in counter_table.items():
         print(f"Counter Name: {entry['counter_name']}, Z3 Variable: {entry['z3_var']}")
 
@@ -27,9 +27,8 @@ def add_to_symbol_table_or_counter_table(var_name, symbol_table, symbol_table_en
         counter_table_entry['z3_var'] = Int(var_name)
         counter_table[var_name] = counter_table_entry.copy()
     elif var_name not in symbol_table:
-        z3_var = Int(var_name)
         symbol_table_entry['var_name'] = var_name
-        symbol_table_entry['z3_var'] = z3_var
+        symbol_table_entry['z3_var'] = Int(var_name)
         symbol_table[var_name] = symbol_table_entry.copy()
 
 def parse_variables_from_ir_expr(expr, symbol_table, symbol_table_entry, counter_table, counter_table_entry):
@@ -56,6 +55,7 @@ def parse_variables_from_ir_cond(cond, symbol_table, symbol_table_entry, counter
         pass
 
 def parse_variables_from_ir(ir):
+    print("\n========== Step 1 ==========")
     symbol_table = {}
     symbol_table_entry = {
         'var_name': None,
@@ -100,11 +100,3 @@ def parse_variables_from_ir(ir):
     pretty_print_counter_table(counter_table)
 
     return symbol_table, counter_table
-
-# if __name__ == "__main__":
-#     file_path = sys.argv[1]
-
-#     ir = astGenPass().visit(getParseTree(file_path))
-
-#     parse_variables_from_ir(ir)
-#     print("Created the symbol table and counter table.")
