@@ -6,9 +6,9 @@ from ChironAST.builder import astGenPass
 from ChironAST import ChironAST
 
 def z3_fixed_point_object_with_start_state_set(ir, sanity_check=False):
-    Inv, state, next_state = z3_fixed_point_invariant_generation(ir)
+    Inv, state, next_state, symbol_table, counter_table = z3_fixed_point_invariant_generation(ir)
 
-    print("\n========== Step 3 ==========\n")
+    print("\n========== Step 3 ==========")
     fp = Fixedpoint()
     fp.register_relation(Inv)
     print("Initialized the Z3 fixedpoint object and registered the invariant relation.")
@@ -42,6 +42,6 @@ def z3_fixed_point_object_with_start_state_set(ir, sanity_check=False):
         result = fp.query(Inv(*non_start_state))
         assert result == unsat, "A non-start state should not satisfy the invariant relation."
         print("Verified that a non-start state does not satisfy the invariant relation.")
-        print("---------- End of Sanity Checks for Step 3 ----------\n")
+        print("\n---------- End of Sanity Checks for Step 3 ----------")
 
-    return fp, Inv, state, next_state
+    return fp, Inv, state, next_state, symbol_table, counter_table

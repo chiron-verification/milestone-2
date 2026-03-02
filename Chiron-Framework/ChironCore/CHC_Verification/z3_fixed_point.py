@@ -43,5 +43,5 @@ def z3_fixed_point_invariant_generation(ir):
 
     print("Created Z3 variables for program state components, user variables, and loop counters.")
 
-    return Inv, state, next_state
+    return Inv, state, next_state, symbol_table, counter_table
 
