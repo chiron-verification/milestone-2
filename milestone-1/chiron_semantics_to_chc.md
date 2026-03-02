@@ -1,3 +1,9 @@
+---
+noteId: "d2549ff0155911f1bab76da85a4d811c"
+tags: []
+
+---
+
 # Chiron Commands to CHC Translation
 
 ## State Representation
@@ -11,37 +17,39 @@ State = (PC, Vars, TurtleState)
 ## Chiron Commands
 
 1. Assignment: `:var = expression`
-2. Conditional: `if condition [...]`
-3. Forward: `forward expression`
-4. Backward: `backward expression`
-5. Left: `left expression`
-6. Right: `right expression`
-7. Pen Down: `pendown`
-8. Pen Up: `penup`
-9. Goto: `goto (x_expr, y_expr)`
-10. No-Op: `NOP`
-11. Pause: `pause`
-12. Repeat: `repeat N [body]` (desugared into loop with counter)
+2. Conditional (If): `if condition [...]`
+3. Conditional (If-Else): `if condition [...] else [...]`
+4. Forward: `forward expression`
+5. Backward: `backward expression`
+6. Left: `left expression`
+7. Right: `right expression`
+8. Pen Down: `pendown`
+9. Pen Up: `penup`
+10. Goto: `goto (x_expr, y_expr)`
+11. No-Op: `NOP`
+12. Pause: `pause`
+13. Repeat: `repeat N [body]` (desugared into loop with counter)
 
-### Loop Implementation
+## Arithmetic and Boolean Expressions
+### Arithmetic Expressions
+- Addition: `expr + expr`
+- Subtraction: `expr - expr`
+- Multiplication: `expr * expr`
+- Division: `expr / expr`
+- Unary Minus: `-expr`
 
-The `repeat N [body]` construct is **desugared** into:
-1. Counter initialization: `:__rep_counter_K = N`
-2. Loop condition: `if (:__rep_counter_K > 0) [...]`
-3. Loop body instructions
-4. Counter decrement: `:__rep_counter_K = :__rep_counter_K - 1`
-5. Backedge: `(ConditionCommand(False), -len(body) - 2)` - unconditional jump back
-
-Example:
-```
-repeat 3 [forward 50]
-```
-
-Desugars to IR (K=1):
-```
-[L0] :__rep_counter_1 = 3                    [1]
-[L1] if (:__rep_counter_1 > 0) [...]         [3]  // skip to L4 if false
-[L2] forward 50                              [1]
-[L3] :__rep_counter_1 = :__rep_counter_1 - 1 [1]
-[L4] if (False) [...]                        [-3] // unconditional jump to L1
-```
+### Boolean Expressions
+- And: `expr && expr`
+- Or: `expr || expr`
+- Not: `!expr`
+- Less Than: `expr < expr`
+- Greater Than: `expr > expr`
+- Less Than or Equal: `expr <= expr`
+- Greater Than or Equal: `expr >= expr`
+- Equal: `expr == expr`
+- Not Equal: `expr != expr`
+- Pen Status Check: `pendown?`
+- True: `true`
+- False: `false`
+- Numeric Value: `Num`
+- Variable Reference: `Var`vs code
