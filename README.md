@@ -43,6 +43,11 @@ This repository contains the implementation of a verifier for Chiron IR using Co
         - ``chiron_expr_to_z3`` function recursively translates a Chiron expression into a Z3 expression, handling various types of expressions such as binary arithmetic operations, comparisons, and variable references.
         - ``chiron_command_to_z3_rule`` function translates a Chiron command into one or more Z3 rules (for conditional commands) based on the semantics of the command and the structure of the Chiron IR.
         - ``add_chiron_ir_to_fixed_point`` function iterates through the linear IR of the Chiron program, translates each instruction into Z3 rules using the previous functions, and adds those rules to the Z3 Fixed Point object. It also includes print statements to show the rules being added for debugging and verification purposes.
+- [x] **Check Safety Properties**:
+    - Code File : `Chiron-Framework/ChironCore/CHC_Verification/safety_properties.py`
+        - Input : A Chiron Turtle (.tl) file, the properties from the input console.
+        - Output : Checks the specified safety properties against the CHC rules in the Z3 Fixed Point object and prints whether each property is satisfied or not, along with any counterexamples if a property fails.
+        - ``check_property`` function takes a Z3 Fixed Point object, the invariant relation, state and next_state tuples, symbol table, counter table, and a property to check. It queries the fixed point object to determine if there exists a state that satisfies the invariant but violates the property. If such a state exists, it marks the property as failed and stores the counterexample.
 
         
 

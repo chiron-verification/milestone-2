@@ -10,6 +10,7 @@ def z3_fixed_point_object_with_start_state_set(ir, sanity_check=False):
 
     print("\n========== Step 3 ==========")
     fp = Fixedpoint()
+    fp.set(engine='spacer')
     fp.register_relation(Inv)
     print("Initialized the Z3 fixedpoint object and registered the invariant relation.")
 
@@ -27,7 +28,7 @@ def z3_fixed_point_object_with_start_state_set(ir, sanity_check=False):
     print("Added the initial state fact to the fixedpoint object.")
 
     if sanity_check:
-        print("\n---------- Sanity Checks for Step 3 ----------\n")
+        print("---------- Sanity Checks for Step 3 ----------")
         result = fp.query(Inv(*start_state))
         assert result == sat, "The initial state should satisfy the invariant relation."
         print("Verified that the initial state satisfies the invariant relation.")
@@ -38,12 +39,12 @@ def z3_fixed_point_object_with_start_state_set(ir, sanity_check=False):
             RealVal(1), # ycor
             RealVal(90), # heading
             BoolVal(True), # pendown
-            *[RealVal(0) for _ in symbol_table],
+            *[RealVal(0) for _ in symbol_table], 
             *[RealVal(0) for _ in counter_table]
         )
         result = fp.query(Inv(*non_start_state))
         assert result == unsat, "A non-start state should not satisfy the invariant relation."
         print("Verified that a non-start state does not satisfy the invariant relation.")
-        print("\n---------- End of Sanity Checks for Step 3 ----------")
+        print("---------- End of Sanity Checks for Step 3 ----------")
 
     return fp, Inv, state, next_state, symbol_table, counter_table
