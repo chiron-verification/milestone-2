@@ -10,6 +10,7 @@ def z3_fixed_point_object_with_start_state_set(ir, sanity_check=False):
 
     print("\n========== Step 3 ==========")
     fp = Fixedpoint()
+    fp.set(engine='spacer')
     fp.register_relation(Inv)
     print("Initialized the Z3 fixedpoint object and registered the invariant relation.")
 
