@@ -6,7 +6,7 @@ This repository contains the implementation of a verifier for Chiron IR using Co
 |------|-------------|-----------------|
 | Aditi Khandelia | 220061 | [AditiKhandelia](https://github.com/AditiKhandelia) |
 | Arush Upadhyaya | 220213 | [A-Rush-R](https://github.com/A-Rush-R)
-| Kushagra Srivastava | 220573| [whizdor](https://github.com/whizdor)
+| Kushagra Srivastava | 220573 | [whizdor](https://github.com/whizdor)
 
 ## Project Structure 
 - `ChironFramework/`: Contains the implementation of the Chiron IR and the translation to CHCs.
