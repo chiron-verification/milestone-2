@@ -1,6 +1,7 @@
 from init_fixed_point import *
 import sys
 from z3 import *
+from z3 import z3util
 from irhandler import getParseTree
 from ChironAST.builder import astGenPass
 from ChironAST import ChironAST
@@ -68,6 +69,9 @@ def chiron_expr_to_z3(expr, fp, Inv, state, next_state, symbol_table, counter_ta
             else:
                 print(f"Error: Unrecognized UnaryArithOp type: {type(expr)}")
                 sys.exit(1)
+        else:
+            print(f"Error: Unrecognized ArithExpr type: {type(expr)}")
+            sys.exit(1)
     elif isinstance(expr, ChironAST.BoolExpr):
         if isinstance(expr, ChironAST.BinCondOp):
             lexpr = expr.lexpr
@@ -291,10 +295,8 @@ def chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, state, next_state,
         
 
 
-if __name__ == "__main__":
-    file_name = sys.argv[1]
-    ir = astGenPass().visit(getParseTree(file_name))
-    fp, Inv, state, next_state, symbol_table, counter_table = z3_fixed_point_object_with_start_state_set(ir, sanity_check=True)
+def add_step_rules_to_fixed_point(ir, sanity_check=False):
+    fp, Inv, state, next_state, symbol_table, counter_table = z3_fixed_point_object_with_start_state_set(ir, sanity_check)
 
     print("\n========== Step 4 ==========")
 
@@ -302,11 +304,15 @@ if __name__ == "__main__":
         instr = stmt[0]
         jump_target = stmt[1]
         rule_true, rule_false = chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, state, next_state, symbol_table, counter_table)
-        fp.rule(rule_true)
+        rule_true_vars = z3util.get_vars(rule_true)
+        fp.rule(ForAll(rule_true_vars, rule_true))
         print(f"Added rule for instruction at line {i}: {rule_true}")
         if rule_false is not None:
-            fp.rule(rule_false)
+            rule_false_vars = z3util.get_vars(rule_false)
+            fp.rule(ForAll(rule_false_vars, rule_false))
             print(f"Added rule for instruction at line {i} (false branch): {rule_false}")
 
         
     print("Step rules added to fixedpoint object.")
+
+    return fp, Inv, state, next_state, symbol_table, counter_table

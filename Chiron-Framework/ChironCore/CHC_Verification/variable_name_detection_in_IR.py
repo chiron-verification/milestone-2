@@ -10,12 +10,12 @@ from ChironAST.builder import astGenPass
 from ChironAST import ChironAST
 
 def pretty_print_symbol_table(symbol_table):
-    print("\n---------- Symbol Table (User Variables) ---------\n")
+    print("---------- Symbol Table (User Variables) ---------")
     for var_name, entry in symbol_table.items():
         print(f"Variable Name: {entry['var_name']}, Z3 Variable: {entry['z3_var']}")
 
 def pretty_print_counter_table(counter_table):
-    print("\n---------- Counter Table (Loop Counters) ---------\n")
+    print("---------- Counter Table (Loop Counters) ---------")
     for counter_name, entry in counter_table.items():
         print(f"Counter Name: {entry['counter_name']}, Z3 Variable: {entry['z3_var']}")
 
