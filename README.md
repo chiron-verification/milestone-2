@@ -6,7 +6,7 @@ This repository contains the implementation of a verifier for Chiron IR using Co
 |------|-------------|-----------------|
 | Aditi Khandelia | 220061 | [AditiKhandelia](https://github.com/AditiKhandelia) |
 | Arush Upadhyaya | 220213 | [A-Rush-R](https://github.com/A-Rush-R)
-| Kushagra Srivastava | 220573 | [whizdor](https://github.com/whizdor)
+| Kushagra Srivastava | 220573 | [hizdor](https://github.com/whizdor)
 
 ## Project Structure 
 - `ChironFramework/`: Contains the implementation of the Chiron IR and the translation to CHCs.
@@ -49,6 +49,159 @@ This repository contains the implementation of a verifier for Chiron IR using Co
         - Output : Checks the specified safety properties against the CHC rules in the Z3 Fixed Point object and prints whether each property is satisfied or not, along with any counterexamples if a property fails.
         - ``check_property`` function takes a Z3 Fixed Point object, the invariant relation, state and next_state tuples, symbol table, counter table, and a property to check. It queries the fixed point object to determine if there exists a state that satisfies the invariant but violates the property. If such a state exists, it marks the property as failed and stores the counterexample.
 
-        
+## Usage
 
+### Running the Verifier
 
+All commands must be run from the `CHC_Verification/` directory:
+
+```bash
+cd Chiron-Framework/ChironCore/CHC_Verification
+python safety_properties.py <path-to-turtle-file> <num-properties>
+```
+
+| Argument | Description |
+|---|---|
+| `<path-to-turtle-file>` | Path to a Chiron Turtle (`.tl`) source file |
+| `<num-properties>` | Number of safety properties to check interactively |
+
+The verifier will then prompt you interactively for each property:
+1. A **name** for the property (free text label)
+2. A **Z3 boolean expression** using the program's state variables
+
+### Available State Variables in Property Expressions
+
+| Variable | Description |
+|---|---|
+| `xcor` | Turtle's current x-coordinate |
+| `ycor` | Turtle's current y-coordinate |
+| `heading` | Turtle's current heading in degrees |
+| `pendown` | Boolean — whether the pen is down |
+| `:varname` → `varname` | Any user variable declared in the program (colon stripped) |
+
+Supported Z3 operators: `And(...)`, `Or(...)`, `Not(...)`, `>=`, `<=`, `==`, `!=`, `>`, `<`, `+`, `-`, `*`, `/`.
+
+---
+
+### Examples
+
+#### Example 1 — Simple forward movement (`forward.tl`)
+
+Program (`test_files/forward.tl`):
+```
+pendown
+forward 50
+forward 100
+:d = 30
+forward :d
+:d = :d + 20
+forward :d
+```
+
+Run:
+```bash
+python safety_properties.py ../../../test_files/forward.tl 2
+```
+
+Interactive session:
+```
+Enter name for property 1: ycor is non-negative
+Enter the boolean expression for property 'ycor is non-negative': ycor >= 0
+
+Enter name for property 2: d is positive
+Enter the boolean expression for property 'd is positive': d >= 0
+```
+
+Expected output: both properties **PASSED** — `ycor` only increases via `forward` and `:d` starts at 30.
+
+---
+
+#### Example 2 — Nested loops (`nested_loops.tl`)
+
+Program (`test_files/nested_loops.tl`):
+```
+:i = 3
+:j = 2
+repeat 3 [
+    repeat 2 [
+        forward :i
+        right :j
+    ]
+    :i = :i + 1
+]
+```
+
+Run:
+```bash
+python safety_properties.py ../../../test_files/nested_loops.tl 1
+```
+
+Interactive session:
+```
+Enter name for property 1: i stays positive
+Enter the boolean expression for property 'i stays positive': i >= 3
+```
+
+Expected output: property **PASSED** — `:i` starts at 3 and only increases.
+
+---
+
+#### Example 3 — Conditional branching (`conditional_if_else.tl`)
+
+Program (`test_files/conditional_if_else.tl`):
+```
+:x = 10
+:y = 20
+if (:x < :y) [
+    forward 50
+] else [
+    backward 50
+]
+:z = :x + :y
+if (:z > 25) [
+    forward :z
+] else [
+    forward 10
+]
+```
+
+Run:
+```bash
+python safety_properties.py ../../../test_files/conditional_if_else.tl 2
+```
+
+Interactive session:
+```
+Enter name for property 1: x equals 10
+Enter the boolean expression for property 'x equals 10': x == 10
+
+Enter name for property 2: z is sum of x and y
+Enter the boolean expression for property 'z is sum of x and y': z == x + y
+```
+
+Expected output: both properties **PASSED**.
+
+---
+
+#### Example 4 — A failing property
+
+Using `forward.tl`, check a property that does not hold:
+
+```bash
+python safety_properties.py ../../../test_files/forward.tl 1
+```
+
+```
+Enter name for property 1: ycor is zero
+Enter the boolean expression for property 'ycor is zero': ycor == 0
+```
+
+Expected output: property **FAILED** — the turtle moves forward, so `ycor` is not always 0. A counterexample state is printed.
+
+## Tests
+- Usage:
+```bash
+Run:  pytest test_runner.py -v
+```
+
+- See `Chiron-Framework/ChironCore/CHC_Verification/test_runner.py` for the test cases and description

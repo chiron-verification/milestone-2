@@ -1,8 +1,9 @@
 # input the ir file
 import sys
+import os
 from z3 import *
 
-directory_to_add = os.path.abspath("/Users/aditikhandelia/Desktop/IITK ACADS/sem 8/CS335/project/code/Chiron-Framework/ChironCore")
+directory_to_add = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(directory_to_add)
 
 from irhandler import getParseTree
