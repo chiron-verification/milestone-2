@@ -6,7 +6,7 @@ This repository contains the implementation of a verifier for Chiron IR using Co
 |------|-------------|-----------------|
 | Aditi Khandelia | 220061 | [AditiKhandelia](https://github.com/AditiKhandelia) |
 | Arush Upadhyaya | 220213 | [A-Rush-R](https://github.com/A-Rush-R)
-| Kushagra Srivastava | 220573 | [hizdor](https://github.com/whizdor)
+| Kushagra Srivastava | 220573 | [whizdor](https://github.com/whizdor)
 
 ## Project Overview
 The project implements a safety verifier for Chiron Turtle programs by translating Chiron IR into Constrained Horn Clauses (CHCs) and solving them with Z3 SPACER.
