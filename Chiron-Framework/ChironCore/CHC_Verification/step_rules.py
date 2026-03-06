@@ -8,14 +8,14 @@ from ChironAST import ChironAST
 from math import cos, sin, pi
 from fractions import Fraction
 
-def trig_bounds(deg):
-    lo = Fraction(cos(deg * pi / 180)).limit_denominator(10**7)
-    hi = Fraction(cos((deg+1) * pi / 180)).limit_denominator(10**7)
-    cos_lo = min(lo, hi);  cos_hi = max(lo, hi)
-    lo = Fraction(sin(deg * pi / 180)).limit_denominator(10**7)
-    hi = Fraction(sin((deg+1) * pi / 180)).limit_denominator(10**7)
-    sin_lo = min(lo, hi) 
-    sin_hi = max(lo, hi)
+TRIG_GRANULARITY = 10  # degrees per bucket
+
+def trig_bounds(deg, granularity=TRIG_GRANULARITY):
+    angles = [deg + k for k in range(granularity + 1)]
+    cos_vals = [Fraction(cos(a * pi / 180)).limit_denominator(10**7) for a in angles]
+    sin_vals = [Fraction(sin(a * pi / 180)).limit_denominator(10**7) for a in angles]
+    cos_lo = min(cos_vals);  cos_hi = max(cos_vals)
+    sin_lo = min(sin_vals);  sin_hi = max(sin_vals)
     return cos_lo, cos_hi, sin_lo, sin_hi
 
 def cos_sin_bounds_z3(h, i):
@@ -25,11 +25,11 @@ def cos_sin_bounds_z3(h, i):
         And(cos_h >= RealVal(-1), cos_h <= RealVal(1),
             sin_h >= RealVal(-1), sin_h <= RealVal(1))
     ]
-    for deg in range(360):
+    for deg in range(0, 360, TRIG_GRANULARITY):
         cos_lo, cos_hi, sin_lo, sin_hi = trig_bounds(deg)
         constraints.append(
             Implies(
-                And(h >= RealVal(deg), h < RealVal(deg+1)),
+                And(h >= RealVal(deg), h < RealVal(deg + TRIG_GRANULARITY)),
                 And(cos_h >= RealVal(f"{cos_lo.numerator}/{cos_lo.denominator}"),
                     cos_h <= RealVal(f"{cos_hi.numerator}/{cos_hi.denominator}"),
                     sin_h >= RealVal(f"{sin_lo.numerator}/{sin_lo.denominator}"),
@@ -38,7 +38,7 @@ def cos_sin_bounds_z3(h, i):
         )
     return cos_h, sin_h, And(constraints)
 
-def normalize_heading(h, n_periods=100):
+def normalize_heading(h, n_periods=10):
     result = h
     for _ in range(n_periods):
         result = If(result >= RealVal(360), result - RealVal(360), result)
@@ -295,8 +295,8 @@ def chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, state, next_state,
         
 
 
-def add_step_rules_to_fixed_point(ir, sanity_check=False):
-    fp, Inv, state, next_state, symbol_table, counter_table = z3_fixed_point_object_with_start_state_set(ir, sanity_check)
+def add_step_rules_to_fixed_point(ir, mode, param=None):
+    fp, Inv, state, next_state, symbol_table, counter_table = z3_fixed_point_object_with_start_state_set(ir, mode, params=param)
 
     print("\n========== Step 4 ==========")
 
