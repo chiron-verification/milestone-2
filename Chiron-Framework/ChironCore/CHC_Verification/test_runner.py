@@ -236,11 +236,8 @@ SUITES = [
 
 ]
 
-# -- pytest parametrize -------------------------------------------------------
-# Flatten SUITES into individual test cases; each gets a readable ID.
-
 _cases = [
-    pytest.param(filepath, expr_fn, expected, id=f"{label} > {name}")
+    pytest.param(filepath, expr_fn, expected, id=f"{label} : {name}")
     for label, filepath, tests in SUITES
     for name, expr_fn, expected in tests
 ]

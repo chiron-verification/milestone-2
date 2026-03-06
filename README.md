@@ -77,7 +77,7 @@ The verifier will then prompt you interactively for each property:
 | `ycor` | Turtle's current y-coordinate |
 | `heading` | Turtle's current heading in degrees |
 | `pendown` | Boolean — whether the pen is down |
-| `:varname` → `varname` | Any user variable declared in the program (colon stripped) |
+| `:varname` -> `varname` | Any user variable declared in the program (colon stripped) |
 
 Supported Z3 operators: `And(...)`, `Or(...)`, `Not(...)`, `>=`, `<=`, `==`, `!=`, `>`, `<`, `+`, `-`, `*`, `/`.
 
@@ -199,6 +199,7 @@ Enter the boolean expression for property 'ycor is zero': ycor == 0
 Expected output: property **FAILED** — the turtle moves forward, so `ycor` is not always 0. A counterexample state is printed.
 
 ## Tests
+
 - Usage:
 ```bash
 Run:  pytest test_runner.py -v
