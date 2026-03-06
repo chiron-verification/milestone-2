@@ -2,12 +2,8 @@
 import sys
 import os
 from z3 import *
-
 directory_to_add = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(directory_to_add)
-
-from irhandler import getParseTree
-from ChironAST.builder import astGenPass
 from ChironAST import ChironAST
 
 def pretty_print_symbol_table(symbol_table):
@@ -62,7 +58,6 @@ def parse_variables_from_ir(ir):
         'var_name': None,
         'z3_var': None,
     }
-    num_loop_counters = 0
     counter_table = {}
     counter_table_entry = {
         'counter_name': None,
