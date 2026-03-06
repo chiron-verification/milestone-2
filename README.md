@@ -158,7 +158,8 @@ Expected output: property **FAILED** — the turtle moves forward, so `ycor` is 
 
 - Usage:
 ```bash
-Run:  pytest test_runner.py -v
+cd Chiron-Framework/ChironCore/CHC_Verfication/tests
+python run_all.py
 ```
 
-- See `Chiron-Framework/ChironCore/CHC_Verification/test_runner.py` for the test cases and description
+- See the tests [`README.md`](./Chiron-Framework/ChironCore/CHC_Verification/tests/README.md) for the test cases and description
