@@ -1,9 +1,6 @@
 from z3_fixed_point import *
 import sys
 from z3 import *
-from irhandler import getParseTree
-from ChironAST.builder import astGenPass
-from ChironAST import ChironAST
 
 def z3_fixed_point_object_with_start_state_set(ir, mode, params=None):
     Inv, state, next_state, symbol_table, counter_table = z3_fixed_point_invariant_generation(ir, mode)
@@ -34,7 +31,13 @@ def z3_fixed_point_object_with_start_state_set(ir, mode, params=None):
         user_vars = list(state[5 : 5 + len(symbol_table)])
         counter_zeros = [RealVal(0) for _ in counter_table]
         quantified = [xcor, ycor, heading] + user_vars
-        init_fact = Inv(IntVal(0), xcor, ycor, heading, BoolVal(False), *user_vars, *counter_zeros)
+        init_fact = Inv(IntVal(0), 
+                        xcor, 
+                        ycor, 
+                        heading,
+                        BoolVal(False), 
+                        *user_vars, 
+                        *counter_zeros)
 
         fp.rule(ForAll(quantified, init_fact))
         print("Added universal initial rule: xcor, ycor, heading, and all user variables are unconstrained.")

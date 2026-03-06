@@ -1,9 +1,6 @@
 from init_fixed_point import *
 import sys
 from z3 import *
-from z3 import z3util
-from irhandler import getParseTree
-from ChironAST.builder import astGenPass
 from ChironAST import ChironAST
 from math import cos, sin, pi
 from fractions import Fraction
@@ -144,7 +141,7 @@ def chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, state, next_state,
         expr_z3 = chiron_expr_to_z3(rexpr, fp, Inv, state, next_state, symbol_table, counter_table)
         if isinstance(lvar, ChironAST.Var):
             var_name = lvar.varname
-            var_name = var_name[1:]
+            var_name = var_name[1:] # Strip the colon
             if var_name in symbol_table:
                 var_index = list(symbol_table.keys()).index(var_name)
                 next_state_user_vars[var_index] = expr_z3

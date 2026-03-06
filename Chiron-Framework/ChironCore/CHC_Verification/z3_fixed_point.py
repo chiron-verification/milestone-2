@@ -1,9 +1,6 @@
 from variable_name_detection_in_IR import *
 import sys
 from z3 import *
-from irhandler import getParseTree
-from ChironAST.builder import astGenPass
-from ChironAST import ChironAST
 
 def z3_fixed_point_invariant_generation(ir, mode):
     symbol_table, counter_table = parse_variables_from_ir(ir)

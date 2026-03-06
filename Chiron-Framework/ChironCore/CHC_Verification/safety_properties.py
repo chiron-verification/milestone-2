@@ -1,12 +1,8 @@
 from step_rules import *
 import sys
 from z3 import *
-from z3 import z3util
 from irhandler import getParseTree
 from ChironAST.builder import astGenPass
-from ChironAST import ChironAST
-from math import cos, sin, pi
-from fractions import Fraction
 import ast as _ast
 
 class Property:
@@ -53,15 +49,19 @@ def check_property(fp, Inv, state, symbol_table, counter_table, property, mode):
         property.status = 'UNKNOWN'
     
 if __name__ == "__main__":
-    # Command line arguments: 1) Chiron program file, 2) number of properties, 3) mode (universal/safety-range/specific/default), 4) params dict (only for specific mode)
+    # Command line arguments: 1) Chiron program file, 2) number of properties, 
+    # 3) mode (universal/safety-range/specific/default), 4) params dict (only for specific mode)
+
     if len(sys.argv) < 4:
         print("Usage: python safety_properties.py <chiron_program_file> <number_of_properties> <mode>")
         sys.exit(1)
     file_name = sys.argv[1]
     mode = sys.argv[3]
+
     if mode not in ['universal', 'safety-range', 'specific', 'default']:
         print("Invalid mode. Please choose 'universal', 'safety-range', 'specific', or 'default'.")
         sys.exit(1)
+        
     params = None
     if mode == 'specific':
         if len(sys.argv) < 5:
@@ -71,6 +71,10 @@ if __name__ == "__main__":
         try:
             raw_params = _ast.literal_eval(sys.argv[4])
             params = {k.lstrip(':'): float(v) for k, v in raw_params.items()}
+
+            if params is None :
+                raise ValueError("Params dict cannot be None for specific mode.")
+            
         except Exception as e:
             print(f"Error parsing params dict: {e}")
             sys.exit(1)
@@ -84,6 +88,7 @@ if __name__ == "__main__":
     print("For turtle's y-coordinate, use 'ycor'")
     print("For turtle's heading, use 'heading'")
     print("For turtle's pen state, use 'pendown'")
+    
     print("State variables available for properties:")
     for i, var in enumerate(symbol_table):
         print(f"{i}. {var}")
