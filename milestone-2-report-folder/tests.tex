@@ -1,0 +1,87 @@
+\section*{Description of test files to be used for evaluating the respective milestone}
+
+The main evaluation artifacts for this milestone are the automated test modules, the shared test infrastructure, and the \texttt{.tl} fixture programs.
+
+\subsection*{Automated test modules}
+
+\begin{longtable}{p{0.22\textwidth} p{0.72\textwidth}}
+\toprule
+\textbf{File} & \textbf{Purpose} \\
+\midrule
+\texttt{tests/test\_default.py} & Checks properties in \texttt{default} mode, where the entire state starts from a concrete zero initialization. These tests focus on whether the verifier can prove or refute invariants from a fixed start state. \\
+\texttt{tests/test\_universal.py} & Checks properties in \texttt{universal} mode, where user variables and key turtle components are unconstrained initially. These tests validate reasoning under arbitrary initial conditions. \\
+\texttt{tests/test\_specific.py} & Checks properties in \texttt{specific} mode using explicit parameter dictionaries. These tests validate the part of the pipeline that reads concrete input assignments from the command line and injects them into the start state. \\
+\texttt{tests/test\_safety\_range.py} & Checks properties in \texttt{safety-range} mode. These tests validate the ghost-parameter mechanism and check whether the implementation can recover a symbolic safe region over initial inputs. \\
+\texttt{tests/helpers.py} & Shared testing infrastructure. It builds the fixed-point system for a given program, constructs the property-evaluation context, suppresses verbose pipeline output during testing, and provides helper assertions for expected pass/fail outcomes. \\
+\texttt{tests/run\_all.py} & Top-level test runner that discovers all \texttt{test\_*.py} files and executes the complete suite. \\
+\bottomrule
+\end{longtable}
+
+\subsection*{Fixture programs used by the tests}
+
+\begin{longtable}{p{0.28\textwidth} p{0.66\textwidth}}
+\toprule
+\textbf{Program file} & \textbf{Purpose in evaluation} \\
+\midrule
+\texttt{assign\_basic.tl} & Basic sequential assignments; used to test simple arithmetic invariants and no-motion/no-pen behavior. \\
+\texttt{assign\_algebra.tl} & Multi-step arithmetic including multiplication and division; used to test algebraic propagation and nonlinear cases. \\
+\texttt{conditional.tl} & Simple conditional branch; used to test branching semantics. \\
+\texttt{loop\_basic.tl} & Counted loop with accumulation; used to test loop invariants. \\
+\texttt{loop\_accum.tl} & Repetition-driven accumulator growth; used to test monotonic arithmetic invariants. \\
+\texttt{loop\_cond.tl} & Loop with internal branching and arithmetic updates; used to test interaction between repetition and conditionals. \\
+\texttt{goto\_computed.tl} & Computed \texttt{goto} destinations from symbolic variables; used for geometric safety properties. \\
+\texttt{square\_goto.tl} & Multiple \texttt{goto} commands that trace a square; used to test bounded-region properties. \\
+\texttt{forward\_square.tl} & Motion using \texttt{forward} and \texttt{right}; used for trig-dependent geometric tests. \\
+\texttt{turns\_only.tl} & Pure heading updates; used for directional reasoning and normalization behavior. \\
+\texttt{pen\_only.tl} & Pen-state updates without arithmetic or motion; used to validate \texttt{pendown}/\texttt{penup} semantics. \\
+\texttt{pen\_with\_var.tl} & Pen commands combined with variable updates; used to test mixed symbolic and boolean state. \\
+\texttt{pen\_toggle.tl} & Alternating pen state changes; useful for repeated pen-state transitions. \\
+\texttt{param\_goto.tl} & Parameterized \texttt{goto}; used in \texttt{specific} and \texttt{safety-range} modes. \\
+\texttt{param\_loop.tl} & Loop whose initial value depends on a parameter; used to test parameter-sensitive arithmetic invariants. \\
+\texttt{param\_cond.tl} & Branching behavior controlled by a parameter; used to test mode-dependent initialization and branch selection. \\
+\texttt{param\_scale.tl} & Arithmetic scaling with an input parameter; used to test concrete parameter injection and sign-sensitive properties. \\
+\texttt{param\_pen.tl} & Parameterized arithmetic followed by pen commands; used to test the interaction of user inputs and pen state. \\
+\texttt{read\_before\_write.tl} & Reads an input parameter before any local assignment; used to validate handling of externally supplied variables in \texttt{specific} mode. \\
+\bottomrule
+\end{longtable}
+
+\subsection*{How the test files should be used during evaluation}
+
+For milestone evaluation, the recommended procedure is:
+\begin{enumerate}[leftmargin=1.5em]
+    \item run the automated suite with \texttt{python run\_all.py};
+    \item inspect individual mode-specific modules when needed; and
+    \item use representative fixture programs directly with \texttt{safety\_properties.py} to demonstrate interactive verification in \texttt{default}, \texttt{universal}, \texttt{specific}, and \texttt{safety-range} modes.
+\end{enumerate}
+
+This combination of direct verifier runs and automated regression tests provides a practical and reproducible way to evaluate the milestone.
+
+
+\subsubsection*{Automated validation through unit tests}
+The repository contains a dedicated automated test suite under \texttt{Chiron-Framework/ChironCore/CHC\_Verification/tests}. From code inspection, the suite currently contains 89 unit tests spanning the four supported modes. The tests are organized around arithmetic, geometric, pen-state, directional, and safety-range behavior, and they collectively check both expected invariants and expected violations. A shared helper layer suppresses pipeline debug output, constructs the fixed-point system, creates the evaluation context for properties, and provides convenience assertions for pass/fail verdicts.
+
+The full automated suite can be run as follows:
+
+\begin{verbatim}
+cd Chiron-Framework/ChironCore/CHC_Verification/tests
+python run_all.py
+\end{verbatim}
+
+Useful narrower invocations are also supported:
+
+\begin{verbatim}
+# verbose test run
+python run_all.py -v
+
+# run one test module
+python -m unittest test_default
+
+# run one class
+python -m unittest test_specific.TestSpecificArithmetic
+
+# run one individual test
+python -m unittest \
+  test_default.TestDefaultArithmetic.test_arith_assign_z_nonneg_pass
+\end{verbatim}
+
+Overall, the work completed so far establishes a usable verification tool rather than just an isolated encoding: there is a state extractor, a mode-sensitive invariant generator, a step-rule translator, a property interface, and an automated regression suite.

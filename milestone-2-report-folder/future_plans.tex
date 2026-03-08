@@ -1,0 +1,27 @@
+\section*{Future Plans}
+
+\subsection*{Milestone summary and current status}
+
+\begin{description}[leftmargin=2.2cm]
+  \item[Milestone 1] Literature review and tooling familiarisation - \textit{completed}: CHC theory studied, Chiron-to-CHC semantics formalised, Z3 Fixedpoint playground implemented.
+  \item[Milestone 2] End-to-end CHC verification pipeline - \textit{completed}: full IR-to-CHC translation, four verification modes (\texttt{default}, \texttt{universal}, \texttt{specific}, \texttt{safety-range}), property-checking interface, CLI, and automated test suite.
+  \item[Milestone 3] Correctness validation and stress testing - \textit{in progress}: basic regression suite in place; deep-loop and complex-property stress testing, and semantic cross-checks, remain outstanding.
+  \item[Milestone 4] Final integration, evaluation, and deliverables - \textit{pending}.
+\end{description}
+
+\subsection*{Planned work}
+
+\subsubsection*{(a) Pipeline efficiency and trigonometric reasoning}
+The most pressing technical challenge is the treatment of heading-dependent motion. The current interval-based approximation of sine and cosine over discretized heading buckets is sound but expensive: it inflates the CHC encoding and already causes solver timeouts on heading-heavy programs. The primary goal for the next milestone is to design a more verification-friendly trigonometric encoding. Reducing nonlinear arithmetic in the encoding more broadly (e.g., replacing symbolic multiplications with bounded linear alternatives where possible) is a secondary priority. If time permits, this phase will also include exploration of additional safety property classes.
+
+\subsubsection*{(b) Canvas-marking safety properties}
+A distinctive class of safety properties for Chiron concerns the \emph{canvas}: specifically, which regions of the 2D plane will become marked (pen down during motion), and which are guaranteed to remain unmarked. We plan to implement and verify properties of the form: ``the turtle never draws in region $R$'', ``all drawing is confined to a bounding box'', and ``the pen is always up when the turtle is in region $S$''. These require reasoning jointly about turtle position, heading, and pen state across all reachable program states, and will constitute a meaningful stress test for the pipeline.
+
+\subsubsection*{(c) Testing, stress testing, and end-to-end integration}
+The final milestone centres on robustness and completeness. Planned work includes:
+\begin{itemize}[leftmargin=1.5em]
+  \item extending the benchmark suite with programs involving deep nesting, large loop counts, compound arithmetic, and combined geometric and variable-level behavior;
+  \item testing with complex, multi-component safety properties involving both turtle state and user variables;
+  \item reducing the fraction of \texttt{UNKNOWN} verdicts through encoding-level improvements and solver parameter tuning; and
+  \item consolidating the full pipeline into a clean, reproducible end-to-end tool with stable CLI outputs, a finalized test suite, and complete documentation.
+\end{itemize}

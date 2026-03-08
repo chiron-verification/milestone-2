@@ -1,0 +1,20 @@
+\section*{Source Code}
+
+The complete implementation is hosted at: \url{https://github.com/chiron-verification/milestone-2}
+\\Commit identifier: \texttt{b25038d27bd61a446769546e0aa35dd31a737cba}
+
+\bigskip
+\noindent
+All verification code resides under \texttt{Chiron-Framework/ChironCore/CHC\_Verification/}.
+The pipeline comprises five modules:
+
+\begin{itemize}
+  \item \texttt{variable\_name\_detection\_in\_IR.py} — scans the IR to build a symbol table of user variables and a counter table of loop-repetition counters.
+  \item \texttt{z3\_fixed\_point.py} — constructs the \texttt{Inv} predicate signature and state-variable tuples for the selected mode.
+  \item \texttt{init\_fixed\_point.py} — instantiates the Z3 \texttt{Fixedpoint} object (SPACER) and asserts the base-case fact or universally quantified initial rule.
+  \item \texttt{step\_rules.py} — translates each IR instruction into a universally quantified CHC implication rule.
+  \item \texttt{safety\_properties.py} — entry point: builds the fixedpoint system, accepts user-specified properties, and reports \textsc{passed}/\textsc{failed}/\textsc{unknown} with invariant or counterexample.
+\end{itemize}
+
+\noindent
+Test programs and pytest suites reside under \texttt{CHC\_Verification/test\_files/}, organised by feature category (\texttt{variable\_arithmetic/}, \texttt{heading/}, \texttt{pen/}, \texttt{compound/}, \texttt{geometric/}). The top-level \texttt{test\_runner.py} covers 13 programs in \texttt{default} mode; \texttt{test\_files/test\_specific\_mode.py} provides four tests for \texttt{specific} mode.
