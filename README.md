@@ -117,7 +117,7 @@ After startup, the verifier prompts for each property:
 | `xcor` | Turtle's current x-coordinate |
 | `ycor` | Turtle's current y-coordinate |
 | `heading` | Turtle's current heading in degrees |
-| `pendown` | Boolean — whether the pen is down |
+| `pendown` | Boolean - whether the pen is down |
 | `varname` | Any user variable declared in the program (`:varname` in source appears as `varname`) |
 | `__rep_counter_*` | Loop counters introduced for `repeat` constructs |
 
@@ -127,22 +127,22 @@ Supported Z3 operators: `And(...)`, `Or(...)`, `Not(...)`, `>=`, `<=`, `==`, `!=
 
 ### Examples
 
-#### Example 1 — Default mode
+#### Example 1 - Default mode
 ```bash
 python CHC_Verification/safety_properties.py ../../test_files/forward.tl 2 default
 ```
 
-#### Example 2 — Universal mode
+#### Example 2 - Universal mode
 ```bash
 python CHC_Verification/safety_properties.py ../../test_files/nested_loops.tl 1 universal
 ```
 
-#### Example 3 — Safety-range mode
+#### Example 3 - Safety-range mode
 ```bash
 python CHC_Verification/safety_properties.py ../../test_files/nested_loops.tl 1 safety-range
 ```
 
-#### Example 4 — Specific mode
+#### Example 4 - Specific mode
 ```bash
 python CHC_Verification/safety_properties.py CHC_Verification/test_files/variable_arithmetic/assignment.tl 1 specific '{"a": 0}'
 ```
@@ -152,7 +152,7 @@ Enter name for property 1: ycor is zero
 Enter the boolean expression for property 'ycor is zero': ycor == 0
 ```
 
-Expected output: property **FAILED** — the turtle moves forward, so `ycor` is not always 0. A counterexample state is printed.
+Expected output: property **FAILED** - the turtle moves forward, so `ycor` is not always 0. A counterexample state is printed.
 
 ## Tests
 

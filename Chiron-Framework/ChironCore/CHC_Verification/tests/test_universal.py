@@ -44,7 +44,7 @@ class TestUniversalArithmetic(ChironTestCase):
         self.assert_pass("taut", Or(self.v("x") >= 0, self.v("x") < 0))
 
     def test_arith_algebra_c_nonneg_fail(self):
-        """c_0 is arbitrary and c = :a * :b is nonlinear — SPACER may not be
+        """c_0 is arbitrary and c = :a * :b is nonlinear - SPACER may not be
         able to disprove c >= 0; the test is then reported as skipped."""
         self.load("assign_algebra.tl")
         self.assert_fail("c_nonneg", self.v("c") >= 0)

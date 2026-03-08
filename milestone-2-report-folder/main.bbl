@@ -1,0 +1,43 @@
+\begin{thebibliography}{1}
+
+\bibitem{z3guide_spacer}
+Generalized pdr with spacer.
+\newblock Online Z3 Guide, 2026.
+\newblock Available at:
+  \url{https://microsoft.github.io/z3guide/docs/fixedpoints/engineforpdr/}.
+
+\bibitem{bjorner2015horn}
+Nikolaj Bj{\o}rner, Arie Gurfinkel, Kenneth~L. McMillan, and Andrey
+  Rybalchenko.
+\newblock Horn clause solvers for program verification.
+\newblock In {\em Fields of Logic and Computation II}, pages 24--51. Springer,
+  2015.
+
+\bibitem{gurfinkel_chc_lecture}
+Arie Gurfinkel.
+\newblock Constrained horn clauses (chc).
+\newblock ECE 750T Lecture Notes, University of Waterloo, 2018.
+
+\bibitem{gurfinkel2015seahorn}
+Arie Gurfinkel, Temesghen Kahsai, Anvesh Komuravelli, and Jorge~A. Navas.
+\newblock The seahorn verification framework.
+\newblock In {\em Computer Aided Verification (CAV)}, 2015.
+
+\bibitem{fixed-point-engine}
+Kry{\v{s}}tof Hoder, Nikolaj Bj{\o}rner, and Leonardo de~Moura.
+\newblock $\mu$z-- an efficient engine for fixed points with constraints.
+\newblock In Ganesh Gopalakrishnan and Shaz Qadeer, editors, {\em Computer
+  Aided Verification}, pages 457--462, Berlin, Heidelberg, 2011. Springer
+  Berlin Heidelberg.
+
+\bibitem{utexas_axiomatic_semantics}
+University of~Texas~at Austin.
+\newblock Axiomatic semantics and hoare logic.
+\newblock Course Lecture Notes.
+
+\bibitem{rybalchenko2011constraint}
+Andrey Rybalchenko.
+\newblock Constraint solving for software verification.
+\newblock In {\em VMCAI}, 2011.
+
+\end{thebibliography}

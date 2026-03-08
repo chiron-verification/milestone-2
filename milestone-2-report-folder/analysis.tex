@@ -1,0 +1,25 @@
+\section*{Analysis}
+
+
+\subsection*{Strengths of our implementation}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Modular design.} Variable extraction, invariant construction, initialization, step-rule encoding, and property checking are separated into dedicated components, making the pipeline easy to read, extend, and debug.
+    \item \textbf{Multiple verification modes.} The verifier supports four distinct verification questions - concrete default, universal, user-specified, and symbolic safe-range - within a single unified pipeline.
+    \item \textbf{Faithful state modeling.} Both program-level variables and turtle-specific state (position, heading, pen) are tracked, allowing the verifier to reason about motion and turtle semantics, not just numeric values.
+    \item \textbf{Broad instruction coverage.} The step-rule encoder handles all main Chiron instruction forms: assignments, branching, assertions, movement, turning, pen control, \texttt{goto}, and loop counters.
+    \item \textbf{Structured test suite.} Tests are organized by mode and property category and include both positive and negative cases, distinguishing provable invariants from reachable violations.
+    \item \textbf{Practical CLI workflow.} A user can invoke the verifier on any \texttt{.tl} program, select a mode, and interactively enter properties to obtain pass/fail/unknown verdicts with counterexamples or invariants.
+\end{itemize}
+
+\subsection*{Limitations of our implementation}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Approximate trigonometric reasoning.} Sine and cosine are non-linear, so movement commands are encoded using interval over-approximations over discretized heading buckets. This increases solver burden, reduces precision, and already causes heading-dependent tests to be skipped in the automated suite because the resulting encoding is too complex for \texttt{SPACER} to handle efficiently.
+    \item \textbf{Heading normalization adds encoding complexity.} Normalizing heading to $[0, 360)$ via a bounded chain of nested \texttt{If}-expressions inflates the CHC encoding and makes invariant synthesis harder for the solver, particularly when turns are combined with forward or backward motion.
+    \item \textbf{Nonlinear arithmetic causes solver timeouts.} Programs involving multiplication of symbolic quantities generate nonlinear constraints that \texttt{SPACER} cannot always resolve, producing \texttt{UNKNOWN} instead of a definitive verdict.
+    \item \textbf{Test programs are small and pedagogical.} The current benchmark suite covers feature breadth but not depth; no program has been stress-tested with deep nesting, large loop counts, or complex symbolic properties, so scalability remains unvalidated.
+    \item \textbf{Properties tested are too simple.} Most verified properties are direct bounds or simple equalities. More realistic safety requirements - combining heading, position, pen state, and user variables across loops and branches - have not yet been formulated or tested.
+\end{itemize}
+
+\subsection*{Data and Visual Analysis}
