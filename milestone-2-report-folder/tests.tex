@@ -365,16 +365,15 @@ This suite requires only the \texttt{unittest} module from the Python standard l
 
 The full automated suite can be run with:
 
-\begin{verbatim}
+\begin{lstlisting}[style=terminal, language=bash]
 cd Chiron-Framework/ChironCore/CHC_Verification/tests
 python run_all.py
-\end{verbatim}
+\end{lstlisting}
 
 \noindent Narrower invocations are also supported:
 
-\begin{verbatim}
+\begin{lstlisting}[style=terminal, language=bash]
 python run_all.py -v                        # verbose
 python -m unittest test_default             # one module
-python -m unittest \
-  test_default.TestDefaultArithmetic.test_arith_assign_z_nonneg_pass
-\end{verbatim}
+python -m unittest test_default.TestDefaultArithmetic.test_arith_assign_z_nonneg_pass
+\end{lstlisting}

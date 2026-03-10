@@ -14,6 +14,42 @@
 \usepackage{tikz}
 \usepackage{pgf-pie}
 \usepackage{xcolor}
+\usepackage{listings}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+\makeatletter
+\renewcommand{\section}{%
+  \@startsection{section}{1}{\z@}%
+                {-2.0ex \@plus -0.5ex \@minus -0.2ex}%
+                { 1.5ex \@plus  0.3ex \@minus  0.2ex}%
+                {\fontsize{15}{16.8}\selectfont\bf\raggedright}%
+}
+\renewcommand{\subsection}{%
+  \@startsection{subsection}{2}{\z@}%
+                {-1.8ex \@plus -0.5ex \@minus -0.2ex}%
+                { 0.8ex \@plus  0.2ex}%
+                {\fontsize{12}{14.4}\selectfont\bf\raggedright}%
+}
+\renewcommand{\subsubsection}{%
+  \@startsection{subsubsection}{3}{\z@}%
+                {-1.5ex \@plus -0.5ex \@minus -0.2ex}%
+                { 0.5ex \@plus  0.2ex}%
+                {\fontsize{10}{12}\selectfont\bf\raggedright}%
+}
+\makeatother
+
+\lstdefinestyle{terminal}{
+    backgroundcolor=\color{blue!5},
+    basicstyle=\ttfamily\small,
+    frame=single,
+    rulecolor=\color{blue!30},
+    breaklines=true,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false
+}
+
 
 \title{Milestone Report: Safety Verification of Chiron IR using Constrained Horn Clauses}
 \author{Kushagra and Friends}

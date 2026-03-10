@@ -28,10 +28,8 @@
 The suite contains 89 unit tests distributed across the four verification modes.
 Figure~\ref{fig:pies} (left) shows the breakdown by mode.
 Of these 89 tests, 7 are automatically skipped at runtime owing to the
-higher heading-normalization complexity described in Section~\ref{sec:tests};
-the remaining 82 are fully active. Every active test produces the expected
-verdict---the solver agrees with the hand-annotated outcome in every case---
-yielding a \textbf{100\% active-test pass rate} (Figure~\ref{fig:pies},~right).
+higher heading-normalization complexity. Every active test produces the expected
+verdict, yielding a \textbf{100\% active-test pass rate} (Figure~\ref{fig:pies},~right).
 
 \begin{figure}[H]
   \centering
@@ -54,8 +52,8 @@ yielding a \textbf{100\% active-test pass rate} (Figure~\ref{fig:pies},~right).
       \pie[radius=2.2,
            color={green!50, gray!45},
            text=legend]{
-        92.1/Active --- all correct (82),
-        7.9/Skipped --- trig\/heading (7)
+        92.1/Active - all correct (82),
+        7.9/Skipped - trig\/heading (7)
       }
     \end{tikzpicture}
   \end{minipage}
@@ -68,13 +66,13 @@ yielding a \textbf{100\% active-test pass rate} (Figure~\ref{fig:pies},~right).
 \subsubsection*{Solver timing benchmark}
 
 Table~\ref{tab:timing} reports wall-clock times measured by running all
-82 active test cases through the full pipeline (IR parsing, fixed-point
+82 active test cases(which were not skipped at run-time) through the full pipeline (IR parsing, fixed-point
 construction, and Z3 SPACER query) on the development machine.
 Times are split into \emph{build} (parsing + CHC encoding) and \emph{solve}
 (SPACER query) to isolate solver overhead.
 
 The great majority of cases resolve in well under 200\,ms.
-The single outlier is the FAILED query \texttt{x~$\leq$~30} on
+The single outlier is the FALSE query \texttt{x~$\leq$~30} on
 \texttt{loop\_accum.tl} in default mode (1.428\,s):
 SPACER must unroll the accumulator loop enough times to witness a state
 where $x > 30$, requiring substantially more fixedpoint iterations than a
@@ -82,16 +80,126 @@ proof query, which terminates as soon as an inductive invariant is found.
 No query exceeds the 15\,s timeout, and there are no \textsc{unknown}
 verdicts in this benchmark set.
 
+All these times have been recorded on our local machines, and are expected to vary across different
+hardware and software environments.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.9\linewidth,
+    height=0.5\linewidth,
+    ymajorgrids=true,
+    grid style=dashed,
+    xlabel={Mode},
+    ylabel={Average time (s)},
+    ymin=0,
+    symbolic x coords={default,universal,specific,safety-range},
+    xtick=data,
+    legend style={
+        at={(0.5,1.03)},
+        anchor=south,
+        legend columns=2
+    },
+    tick label style={font=\small},
+    label style={font=\small},
+    legend cell align=left
+]
+
+\addplot[
+    color=blue,
+    mark=*,
+    thick
+] coordinates {
+    (default,0.0348)
+    (universal,0.0543)
+    (specific,0.0301)
+    (safety-range,0.0512)
+};
+\addlegendentry{Avg Build Time}
+
+\addplot[
+    color=red,
+    mark=square*,
+    thick
+] coordinates {
+    (default,0.0893)
+    (universal,0.0269)
+    (specific,0.0485)
+    (safety-range,0.0279)
+};
+\addlegendentry{Avg Solve Time}
+
+\end{axis}
+\end{tikzpicture}
+\caption{Average build and solve times across verification modes.}
+\label{fig:avg-build-solve-times}
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.9\linewidth,
+    height=0.5\linewidth,
+    ymajorgrids=true,
+    grid style=dashed,
+    xlabel={Property family},
+    ylabel={Average time (s)},
+    ymin=0,
+    symbolic x coords={Arithmetic,Geometric,Pen,Directional},
+    xtick=data,
+    legend style={
+        at={(0.5,1.03)},
+        anchor=south,
+        legend columns=2
+    },
+    tick label style={font=\small},
+    label style={font=\small},
+    legend cell align=left
+]
+
+\addplot[
+    color=blue,
+    mark=*,
+    thick
+] coordinates {
+    (Arithmetic,0.0447)
+    (Geometric,0.0343)
+    (Pen,0.0428)
+    (Directional,0.0396)
+};
+\addlegendentry{Avg Build Time}
+
+\addplot[
+    color=red,
+    mark=square*,
+    thick
+] coordinates {
+    (Arithmetic,0.0824)
+    (Geometric,0.0384)
+    (Pen,0.0247)
+    (Directional,0.0236)
+};
+\addlegendentry{Avg Solve Time}
+
+\end{axis}
+\end{tikzpicture}
+\caption{Average build and solve times across property families.}
+\label{fig:avg-build-solve-properties}
+\end{figure}
+
 \begin{longtable}{p{0.20\textwidth} p{0.12\textwidth} p{0.22\textwidth} c r r r}
-\caption{Solver timing benchmark --- all 82 active test queries.}
+\caption{Solver timing benchmark.}
 \label{tab:timing} \\
 \toprule
-\textbf{Program} & \textbf{Mode} & \textbf{Property} & \textbf{V} & \textbf{Build\,(s)} & \textbf{Solve\,(s)} & \textbf{Total\,(s)} \\
+\textbf{Program} & \textbf{Mode} & \textbf{Property} & \textbf{EV} & \textbf{Build\,(s)} & \textbf{Solve\,(s)} & \textbf{Total\,(s)} \\
 \midrule
 \endfirsthead
 \multicolumn{7}{l}{\small\itshape (continued from previous page)} \\
 \toprule
-\textbf{Program} & \textbf{Mode} & \textbf{Property} & \textbf{V} & \textbf{Build\,(s)} & \textbf{Solve\,(s)} & \textbf{Total\,(s)} \\
+\textbf{Program} & \textbf{Mode} & \textbf{Property} & \textbf{EV} & \textbf{Build\,(s)} & \textbf{Solve\,(s)} & \textbf{Total\,(s)} \\
 \midrule
 \endhead
 \bottomrule
@@ -99,7 +207,7 @@ verdicts in this benchmark set.
 \bottomrule
 \endlastfoot
 %% -- Default mode ------------------------------------------------------
-\multicolumn{7}{l}{\textit{Default mode --- Arithmetic}} \\
+\multicolumn{7}{l}{\textit{Default mode - Arithmetic Properties}} \\
 \midrule
 \texttt{assign\_basic}   & default & $z \geq 0$                          & P & 0.020 & 0.017 & 0.038 \\
 \texttt{assign\_basic}   & default & $z \leq 20$                         & F & 0.017 & 0.019 & 0.036 \\
@@ -111,7 +219,7 @@ verdicts in this benchmark set.
 \texttt{loop\_cond}      & default & $y \leq 100$                        & P & 0.089 & 0.205 & 0.294 \\
 \texttt{assign\_basic}   & default & $z \geq 100$                        & F & 0.021 & 0.007 & 0.028 \\
 \midrule
-\multicolumn{7}{l}{\textit{Default mode --- Geometric}} \\
+\multicolumn{7}{l}{\textit{Default mode - Geometric Properties}} \\
 \midrule
 \texttt{square\_goto}    & default & bounding box                        & P & 0.011 & 0.021 & 0.032 \\
 \texttt{square\_goto}    & default & $\mathit{xcor}\leq 30$              & F & 0.012 & 0.025 & 0.036 \\
@@ -119,7 +227,7 @@ verdicts in this benchmark set.
 \texttt{goto\_computed}  & default & $\mathit{ycor}\leq 10$              & F & 0.025 & 0.036 & 0.060 \\
 \texttt{loop\_cond}      & default & $\mathit{xcor}=0$                   & P & 0.091 & 0.027 & 0.118 \\
 \midrule
-\multicolumn{7}{l}{\textit{Default mode --- Pen}} \\
+\multicolumn{7}{l}{\textit{Default mode - Pen Properties}} \\
 \midrule
 \texttt{assign\_basic}   & default & $\neg\,\mathit{pendown}$           & P & 0.020 & 0.012 & 0.032 \\
 \texttt{pen\_only}       & default & tautology                           & P & 0.008 & 0.005 & 0.013 \\
@@ -128,7 +236,7 @@ verdicts in this benchmark set.
 \texttt{loop\_cond}      & default & $\neg\,\mathit{pendown}$           & P & 0.095 & 0.025 & 0.119 \\
 \texttt{pen\_with\_var}  & default & $\neg\,\mathit{pendown}$           & F & 0.014 & 0.019 & 0.033 \\
 \midrule
-\multicolumn{7}{l}{\textit{Default mode --- Directional}} \\
+\multicolumn{7}{l}{\textit{Default mode - Directional Properties}} \\
 \midrule
 \texttt{assign\_basic}   & default & $\mathit{heading}=0$               & P & 0.019 & 0.023 & 0.042 \\
 \texttt{loop\_accum}     & default & $\mathit{heading}=0$               & P & 0.038 & 0.021 & 0.059 \\
@@ -136,7 +244,7 @@ verdicts in this benchmark set.
 \texttt{conditional}     & default & $\mathit{heading}=0$               & P & 0.056 & 0.022 & 0.078 \\
 %% -- Universal mode ----------------------------------------------------
 \midrule
-\multicolumn{7}{l}{\textit{Universal mode --- Arithmetic}} \\
+\multicolumn{7}{l}{\textit{Universal mode - Arithmetic Properties}} \\
 \midrule
 \texttt{assign\_basic}   & universal & $z \geq 0$                       & F & 0.028 & 0.032 & 0.059 \\
 \texttt{assign\_basic}   & universal & $z{>}0\vee z{\leq}0$            & P & 0.027 & 0.014 & 0.041 \\
@@ -147,13 +255,13 @@ verdicts in this benchmark set.
 \texttt{loop\_accum}     & universal & $x{\geq}0\vee x{<}0$           & P & 0.065 & 0.032 & 0.097 \\
 \texttt{assign\_algebra} & universal & $c \geq 0$                       & F & 0.042 & 0.026 & 0.067 \\
 \midrule
-\multicolumn{7}{l}{\textit{Universal mode --- Geometric}} \\
+\multicolumn{7}{l}{\textit{Universal mode - Geometric Properties}} \\
 \midrule
 \texttt{square\_goto}    & universal & bounding box                     & F & 0.015 & 0.022 & 0.037 \\
 \texttt{goto\_computed}  & universal & $\mathit{xcor}\leq 50$          & F & 0.033 & 0.024 & 0.057 \\
 \texttt{loop\_cond}      & universal & $\mathit{xcor}=0$               & F & 0.129 & 0.028 & 0.157 \\
 \midrule
-\multicolumn{7}{l}{\textit{Universal mode --- Pen}} \\
+\multicolumn{7}{l}{\textit{Universal mode - Pen Properties}} \\
 \midrule
 \texttt{assign\_basic}   & universal & $\neg\,\mathit{pendown}$        & P & 0.025 & 0.015 & 0.041 \\
 \texttt{pen\_only}       & universal & $\neg\,\mathit{pendown}$        & F & 0.011 & 0.024 & 0.035 \\
@@ -161,13 +269,13 @@ verdicts in this benchmark set.
 \texttt{loop\_cond}      & universal & $\neg\,\mathit{pendown}$        & P & 0.140 & 0.036 & 0.176 \\
 \texttt{pen\_with\_var}  & universal & $\neg\,\mathit{pendown}$        & F & 0.019 & 0.034 & 0.054 \\
 \midrule
-\multicolumn{7}{l}{\textit{Universal mode --- Directional}} \\
+\multicolumn{7}{l}{\textit{Universal mode - Directional Properties}} \\
 \midrule
 \texttt{assign\_basic}   & universal & $\mathit{heading}=0$            & F & 0.026 & 0.028 & 0.055 \\
 \texttt{loop\_accum}     & universal & $h{\geq}0\vee h{<}0$           & P & 0.056 & 0.026 & 0.082 \\
 %% -- Specific mode -----------------------------------------------------
 \midrule
-\multicolumn{7}{l}{\textit{Specific mode --- Arithmetic}} \\
+\multicolumn{7}{l}{\textit{Specific mode - Arithmetic Properties}} \\
 \midrule
 \texttt{read\_before\_write} & specific & $z\geq 0$ (\texttt{step}=50)    & P & 0.018 & 0.044 & 0.062 \\
 \texttt{read\_before\_write} & specific & $z\leq 100$ (\texttt{step}=50)  & F & 0.018 & 0.038 & 0.056 \\
@@ -181,28 +289,28 @@ verdicts in this benchmark set.
 \texttt{param\_cond}     & specific & $\mathit{val}\geq 0$ (\texttt{init}=80)  & P & 0.050 & 0.041 & 0.091 \\
 \texttt{param\_cond}     & specific & $\mathit{val}\leq 60$ (\texttt{init}=80) & F & 0.052 & 0.032 & 0.084 \\
 \midrule
-\multicolumn{7}{l}{\textit{Specific mode --- Geometric}} \\
+\multicolumn{7}{l}{\textit{Specific mode - Geometric Properties}} \\
 \midrule
 \texttt{param\_goto}     & specific & box (\texttt{sx}=10, \texttt{sy}=20)      & P & 0.018 & 0.037 & 0.055 \\
 \texttt{param\_goto}     & specific & $\mathit{xcor}\leq 50$ (\texttt{sx}=100) & F & 0.022 & 0.057 & 0.079 \\
 \texttt{param\_goto}     & specific & $\mathit{xcor}\geq 0$ (\texttt{sx}=$-$50) & F & 0.018 & 0.031 & 0.049 \\
 \texttt{param\_goto}     & specific & $\mathit{ycor}\leq 50$ (\texttt{sy}=10)  & P & 0.023 & 0.038 & 0.061 \\
 \midrule
-\multicolumn{7}{l}{\textit{Specific mode --- Pen}} \\
+\multicolumn{7}{l}{\textit{Specific mode - Pen Properties}} \\
 \midrule
 \texttt{param\_pen}      & specific & $\mathit{mark}\geq 0$ (\texttt{b}=5)    & P & 0.020 & 0.032 & 0.053 \\
 \texttt{param\_pen}      & specific & $\neg\,\mathit{pendown}$ (\texttt{b}=5) & F & 0.022 & 0.020 & 0.043 \\
 \texttt{param\_pen}      & specific & $\mathit{mark}\geq 0$ (\texttt{b}=$-$5) & F & 0.020 & 0.030 & 0.051 \\
 \texttt{param\_pen}      & specific & $\mathit{mark}\leq 10$ (\texttt{b}=3)  & P & 0.020 & 0.025 & 0.045 \\
 \midrule
-\multicolumn{7}{l}{\textit{Specific mode --- Directional}} \\
+\multicolumn{7}{l}{\textit{Specific mode - Directional Properties}} \\
 \midrule
 \texttt{param\_scale}    & specific & $\mathit{heading}=0$ (\texttt{s}=10) & P & 0.015 & 0.029 & 0.044 \\
 \texttt{param\_loop}     & specific & $\mathit{heading}=0$ (\texttt{s}=5)  & P & 0.069 & 0.029 & 0.098 \\
 \texttt{param\_cond}     & specific & $\mathit{heading}>0$ (\texttt{i}=80) & F & 0.052 & 0.026 & 0.078 \\
 %% -- Safety-range mode -------------------------------------------------
 \midrule
-\multicolumn{7}{l}{\textit{Safety-range mode --- Arithmetic}} \\
+\multicolumn{7}{l}{\textit{Safety-range mode - Arithmetic Properties}} \\
 \midrule
 \texttt{loop\_accum}     & safety-range & $x \geq 0$                    & F & 0.045 & 0.016 & 0.061 \\
 \texttt{assign\_basic}   & safety-range & $z \leq 20$                   & F & 0.027 & 0.019 & 0.046 \\
@@ -211,24 +319,25 @@ verdicts in this benchmark set.
 \texttt{loop\_cond}      & safety-range & $y \leq 100$                  & F & 0.123 & 0.021 & 0.144 \\
 \texttt{param\_loop}     & safety-range & $\mathit{acc}\geq 0$          & F & 0.066 & 0.021 & 0.087 \\
 \midrule
-\multicolumn{7}{l}{\textit{Safety-range mode --- Geometric}} \\
+\multicolumn{7}{l}{\textit{Safety-range mode - Geometric Properties}} \\
 \midrule
 \texttt{goto\_computed}  & safety-range & $\mathit{xcor}\leq 50$       & P & 0.033 & 0.077 & 0.110 \\
 \texttt{goto\_computed}  & safety-range & $\mathit{xcor}\leq 5$        & F & 0.032 & 0.040 & 0.072 \\
 \texttt{goto\_computed}  & safety-range & $\mathit{ycor}\leq 25$       & P & 0.032 & 0.033 & 0.065 \\
 \texttt{param\_goto}     & safety-range & $\mathit{xcor}\leq 50$       & F & 0.030 & 0.033 & 0.063 \\
 \midrule
-\multicolumn{7}{l}{\textit{Safety-range mode --- Pen}} \\
+\multicolumn{7}{l}{\textit{Safety-range mode - Pen Properties}} \\
 \midrule
 \texttt{assign\_basic}   & safety-range & $\neg\,\mathit{pendown}$     & P & 0.041 & 0.022 & 0.063 \\
 \texttt{pen\_with\_var}  & safety-range & $\neg\,\mathit{pendown}$     & F & 0.028 & 0.035 & 0.063 \\
 \texttt{loop\_cond}      & safety-range & $\neg\,\mathit{pendown}$     & P & 0.193 & 0.039 & 0.231 \\
 \texttt{param\_pen}      & safety-range & $\neg\,\mathit{pendown}$     & F & 0.029 & 0.025 & 0.054 \\
 \midrule
-\multicolumn{7}{l}{\textit{Safety-range mode --- Directional}} \\
+\multicolumn{7}{l}{\textit{Safety-range mode - Directional Properties}} \\
 \midrule
 \texttt{assign\_basic}   & safety-range & $\mathit{heading}=0$         & P & 0.027 & 0.021 & 0.049 \\
 \texttt{loop\_accum}     & safety-range & $\mathit{heading}=0$         & P & 0.046 & 0.024 & 0.069 \\
 \texttt{loop\_accum}     & safety-range & $\mathit{heading}>0$         & F & 0.046 & 0.018 & 0.064 \\
 \texttt{assign\_algebra} & safety-range & $\mathit{heading}>0$         & F & 0.048 & 0.020 & 0.068 \\
 \end{longtable}
+

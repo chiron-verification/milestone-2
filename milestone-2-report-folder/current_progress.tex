@@ -1,6 +1,6 @@
 % !TEX root = main.tex
 \section*{Current Progress}
-The implemented pipeline covers the full end-to-end path from a Chiron source program to a property verdict, encompassing state extraction, invariant generation, rule encoding, and property checking.
+The project began with a thorough literature review and design phase. The implemented pipeline covers the full end-to-end path from a Chiron source program to a property verdict, encompassing state extraction, invariant generation, rule encoding, and property checking.
 
 \subsection*{Literature Review}
 
@@ -52,18 +52,14 @@ Given a user-provided boolean expression over the state variables, the verifier 
 
 The verifier is invoked from \texttt{Chiron-Framework/ChironCore/}. The dependecies from Chiron Project suffice to run it. The four supported modes are:
 
-\begin{verbatim}
-uv run python CHC_Verification/safety_properties.py \
-    <program.tl> <num_properties> default
+\begin{lstlisting}[style=terminal, language=bash]
+uv run python CHC_Verification/safety_properties.py <program.tl> <num_properties> default
 
-uv run python CHC_Verification/safety_properties.py \
-    <program.tl> <num_properties> universal
+uv run python CHC_Verification/safety_properties.py <program.tl> <num_properties> universal
 
-uv run python CHC_Verification/safety_properties.py \
-    <program.tl> <num_properties> specific '{"x": 10, "y": 20}'
+uv run python CHC_Verification/safety_properties.py <program.tl> <num_properties> specific `{"x": 10, "y": 20}'
 
-uv run python CHC_Verification/safety_properties.py \
-    <program.tl> <num_properties> safety-range
-\end{verbatim}
+uv run python CHC_Verification/safety_properties.py <program.tl> <num_properties> safety-range
+\end{lstlisting}
 
 The tool then prompts interactively for property names and boolean expressions over \texttt{xcor}, \texttt{ycor}, \texttt{heading}, \texttt{pendown}, user variables, and loop counters; \texttt{And}, \texttt{Or}, and \texttt{Not} are also available.
