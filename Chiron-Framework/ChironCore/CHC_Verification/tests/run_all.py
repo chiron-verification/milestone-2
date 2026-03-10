@@ -5,6 +5,7 @@ Test runner for the CHC verification test suite.
 Usage:
     python run_all.py                      # run everything
     python run_all.py -v                   # verbose
+    python run_all.py -t                   # print per-test timing
     python run_all.py -k trig              # only trig tests  (Python 3.12+)
     python run_all.py default.test_default # run one module
 """

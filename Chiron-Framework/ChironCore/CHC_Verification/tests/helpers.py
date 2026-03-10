@@ -5,6 +5,7 @@ Shared helpers and base test class for CHC verification tests.
 import unittest
 import sys
 import os
+import time
 from contextlib import redirect_stdout
 from io import StringIO
 
@@ -24,6 +25,7 @@ from z3 import *
 
 PROGRAMS_DIR = os.path.join(_THIS_DIR, "programs")
 TIMEOUT_MS   = 15_000   # Z3 hint - not always respected by SPACER
+TIMING       = "-t" in sys.argv
 
 
 def program_path(name: str) -> str:
@@ -66,10 +68,12 @@ class ChironTestCase(unittest.TestCase):
 
     def load(self, tl_file: str, params=None):
         """Build the fixedpoint for *tl_file* under ``self.MODE``."""
-
+        t0 = time.perf_counter()
         with redirect_stdout(StringIO()):
             self._fp, self._Inv, self._state, self._ns, self._st, self._ct = \
                 build_fp(tl_file, self.MODE, params)
+        self._build_time = time.perf_counter() - t0
+        self._tl_file = tl_file
         self._ctx = make_context(self._state, self._st, self._ct)
 
     def v(self, name: str):
@@ -79,9 +83,18 @@ class ChironTestCase(unittest.TestCase):
         """Assert the property is an invariant (PASSED).
         If the solver returns UNKNOWN the test is skipped with a message."""
         prop = Property(name, expr)
+        t1 = time.perf_counter()
         _run_check(self._fp, self._Inv, self._state, self._st, self._ct, prop, self.MODE)
+        solve_time = time.perf_counter() - t1
         if prop.status == "UNKNOWN":
             self.skipTest(f"Property '{name}': solver could not determine result (UNKNOWN)")
+        if TIMING:
+            print(
+                f"  TIMING  {self._tl_file:<25} {self.MODE:<15} {name:<30} "
+                f"build={self._build_time:.4f}s  solve={solve_time:.4f}s  "
+                f"total={self._build_time + solve_time:.4f}s  expected=PASSED",
+                file=sys.stderr,
+            )
         self.assertEqual(
             prop.status, "PASSED",
             f"Property '{name}': expected PASSED, got {prop.status}",
@@ -92,9 +105,18 @@ class ChironTestCase(unittest.TestCase):
         """Assert the property is NOT an invariant (FAILED).
         If the solver returns UNKNOWN the test is skipped with a message."""
         prop = Property(name, expr)
+        t1 = time.perf_counter()
         _run_check(self._fp, self._Inv, self._state, self._st, self._ct, prop, self.MODE)
+        solve_time = time.perf_counter() - t1
         if prop.status == "UNKNOWN":
             self.skipTest(f"Property '{name}': solver could not determine result (UNKNOWN)")
+        if TIMING:
+            print(
+                f"  TIMING  {self._tl_file:<25} {self.MODE:<15} {name:<30} "
+                f"build={self._build_time:.4f}s  solve={solve_time:.4f}s  "
+                f"total={self._build_time + solve_time:.4f}s  expected=FAILED",
+                file=sys.stderr,
+            )
         self.assertEqual(
             prop.status, "FAILED",
             f"Property '{name}': expected FAILED, got {prop.status}",

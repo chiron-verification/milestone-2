@@ -49,7 +49,8 @@ Each IR instruction is mapped to a universally quantified CHC implication over \
 Given a user-provided boolean expression over the state variables, the verifier queries SPACER for a reachable violating state and reports \texttt{PASSED}, \texttt{FAILED}, or \texttt{UNKNOWN}. A counterexample is retained on failure; the synthesised invariant is stored on success. In \texttt{safety-range} mode, the invariant is additionally instantiated at the initial state to extract a symbolic safety precondition over starting values.
 
 \subsection*{Usage}
-The verifier is invoked from \texttt{Chiron-Framework/ChironCore/}. The four supported modes are:
+
+The verifier is invoked from \texttt{Chiron-Framework/ChironCore/}. The dependecies from Chiron Project suffice to run it. The four supported modes are:
 
 \begin{verbatim}
 uv run python CHC_Verification/safety_properties.py \
