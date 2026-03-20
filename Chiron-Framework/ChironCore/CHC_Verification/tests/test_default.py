@@ -93,13 +93,6 @@ class TestDefaultGeometric(ChironTestCase):
         self.assert_pass("xcor_zero", self.v("xcor") == 0)
 
 
-_HEADING_SKIP = (
-    "SPACER cannot efficiently prove invariants over the normalize_heading "
-    "If-chain (20 nested Z3 If-expressions per turn). This is a known solver "
-    "limitation, not a program correctness issue."
-)
-
-
 class TestDefaultPen(ChironTestCase):
     """Pen-state properties."""
 
@@ -141,13 +134,11 @@ class TestDefaultDirectional(ChironTestCase):
 
     MODE = "default"
 
-    @unittest.skip(_HEADING_SKIP)
     def test_dir_heading_nonneg_pass(self):
         """Heading is normalized to [0,360). Starting at 0, right 90 -> 270, etc."""
         self.load("turns_only.tl")
         self.assert_pass("heading_nonneg", self.v("heading") >= 0)
 
-    @unittest.skip(_HEADING_SKIP)
     def test_dir_heading_small_fail(self):
         """Heading reaches 270 -> heading <= 90 is violated."""
         self.load("turns_only.tl")
@@ -182,7 +173,7 @@ class TestDefaultTrig(ChironTestCase):
 
     MODE = "default"
 
-    @unittest.skip(_HEADING_SKIP)
+    @unittest.skip("SPACER cannot prove trig-based position invariants with the exact If-chain encoding.")
     def test_trig_forward_square_box_pass(self):
         """forward_square.tl draws ~square at heading multiples of 90.
         Generous box [-100,100]x[-100,100] should hold."""
@@ -192,7 +183,6 @@ class TestDefaultTrig(ChironTestCase):
             self.v("ycor") >= -100, self.v("ycor") <= 100,
         ))
 
-    @unittest.skip(_HEADING_SKIP)
     def test_trig_forward_square_positive_fail(self):
         """ycor goes negative (~ -50) -> ycor >= 0 is violated."""
         self.load("forward_square.tl")

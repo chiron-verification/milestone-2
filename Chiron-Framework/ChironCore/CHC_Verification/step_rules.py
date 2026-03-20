@@ -5,42 +5,28 @@ from ChironAST import ChironAST
 from math import cos, sin, pi
 from fractions import Fraction
 
-TRIG_GRANULARITY = 10  # degrees per bucket
+_MULT15_VALUES = {
+    deg: (Fraction(cos(deg * pi / 180)).limit_denominator(10**9),
+          Fraction(sin(deg * pi / 180)).limit_denominator(10**9))
+    for deg in range(0, 360, 15)
+}
 
-def trig_bounds(deg, granularity=TRIG_GRANULARITY):
-    angles = [deg + k for k in range(granularity + 1)]
-    cos_vals = [Fraction(cos(a * pi / 180)).limit_denominator(10**7) for a in angles]
-    sin_vals = [Fraction(sin(a * pi / 180)).limit_denominator(10**7) for a in angles]
-    cos_lo = min(cos_vals);  cos_hi = max(cos_vals)
-    sin_lo = min(sin_vals);  sin_hi = max(sin_vals)
-    return cos_lo, cos_hi, sin_lo, sin_hi
+def cos_sin_exact_z3(h, i):
+    cos_expr = RealVal(0)
+    sin_expr = RealVal(0)
+    for deg in range(345, -1, -15):
+        cos_f, sin_f = _MULT15_VALUES[deg]
+        cos_expr = If(h == RealVal(deg),
+                      RealVal(f"{cos_f.numerator}/{cos_f.denominator}"),
+                      cos_expr)
+        sin_expr = If(h == RealVal(deg),
+                      RealVal(f"{sin_f.numerator}/{sin_f.denominator}"),
+                      sin_expr)
+    return cos_expr, sin_expr, BoolVal(True)
 
-def cos_sin_bounds_z3(h, i):
-    cos_h = Real(f'cos_h_{i}')
-    sin_h = Real(f'sin_h_{i}')
-    constraints = [
-        And(cos_h >= RealVal(-1), cos_h <= RealVal(1),
-            sin_h >= RealVal(-1), sin_h <= RealVal(1))
-    ]
-    for deg in range(0, 360, TRIG_GRANULARITY):
-        cos_lo, cos_hi, sin_lo, sin_hi = trig_bounds(deg)
-        constraints.append(
-            Implies(
-                And(h >= RealVal(deg), h < RealVal(deg + TRIG_GRANULARITY)),
-                And(cos_h >= RealVal(f"{cos_lo.numerator}/{cos_lo.denominator}"),
-                    cos_h <= RealVal(f"{cos_hi.numerator}/{cos_hi.denominator}"),
-                    sin_h >= RealVal(f"{sin_lo.numerator}/{sin_lo.denominator}"),
-                    sin_h <= RealVal(f"{sin_hi.numerator}/{sin_hi.denominator}"))
-            )
-        )
-    return cos_h, sin_h, And(constraints)
-
-def normalize_heading(h, n_periods=10):
-    result = h
-    for _ in range(n_periods):
-        result = If(result >= RealVal(360), result - RealVal(360), result)
-    for _ in range(n_periods):
-        result = If(result < RealVal(0), result + RealVal(360), result)
+def normalize_heading(h):
+    result = If(h >= RealVal(360), h - RealVal(360), h)
+    result = If(result < RealVal(0), result + RealVal(360), result)
     return result
 
 def chiron_expr_to_z3(expr, fp, Inv, state, next_state, symbol_table, counter_table):
@@ -199,12 +185,12 @@ def chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, state, next_state,
         expr_z3 = chiron_expr_to_z3(expr, fp, Inv, state, next_state, symbol_table, counter_table)
 
         if direction == "forward":
-            cos_h, sin_h, trig_constraints = cos_sin_bounds_z3(state[3], i)
+            cos_h, sin_h, trig_constraints = cos_sin_exact_z3(state[3], i)
             next_state_xcor = state[1] + expr_z3 * cos_h
             next_state_ycor = state[2] + expr_z3 * sin_h
             next_state_heading = state[3]
         elif direction == "backward":
-            cos_h, sin_h, trig_constraints = cos_sin_bounds_z3(state[3], i)
+            cos_h, sin_h, trig_constraints = cos_sin_exact_z3(state[3], i)
             next_state_xcor = state[1] - expr_z3 * cos_h
             next_state_ycor = state[2] - expr_z3 * sin_h
             next_state_heading = state[3]

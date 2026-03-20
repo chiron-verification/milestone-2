@@ -66,12 +66,6 @@ class TestSafetyRangeGeometric(ChironTestCase):
         self.assert_fail("xcor_bound", self.v("xcor") <= 50)
 
 
-_HEADING_SKIP = (
-    "SPACER cannot efficiently prove invariants over the normalize_heading "
-    "If-chain (20 nested Z3 If-expressions per turn)."
-)
-
-
 class TestSafetyRangePen(ChironTestCase):
     """Pen-state properties - pen starts False regardless of ghost params."""
 
@@ -103,13 +97,11 @@ class TestSafetyRangeDirectional(ChironTestCase):
 
     MODE = "safety-range"
 
-    @unittest.skip(_HEADING_SKIP)
     def test_dir_heading_nonneg_pass(self):
         """Heading starts 0, right 90 -> 270, 180, 90, 0 - all >= 0."""
         self.load("turns_only.tl")
         self.assert_pass("heading_nonneg", self.v("heading") >= 0)
 
-    @unittest.skip(_HEADING_SKIP)
     def test_dir_heading_small_fail(self):
         """Heading reaches 270 -> heading <= 90 violated."""
         self.load("turns_only.tl")

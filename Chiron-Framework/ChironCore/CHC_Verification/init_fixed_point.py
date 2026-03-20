@@ -54,7 +54,10 @@ def z3_fixed_point_object_with_start_state_set(ir, mode, params=None):
                         *counter_zeros,
                         *user_var_starts)   
         
-        fp.rule(ForAll(user_var_starts, init_fact))
+        if user_var_starts:
+            fp.rule(ForAll(user_var_starts, init_fact))
+        else:
+            fp.fact(init_fact)
         print("Added safety-range initial rule: user variables are initialized to their start values (ghost parameters), which are universally quantified.")
 
     elif (mode == "specific"):

@@ -73,12 +73,6 @@ class TestUniversalGeometric(ChironTestCase):
         self.assert_fail("xcor_zero", self.v("xcor") == 0)
 
 
-_HEADING_SKIP = (
-    "SPACER cannot efficiently prove invariants over the normalize_heading "
-    "If-chain (20 nested Z3 If-expressions per turn)."
-)
-
-
 class TestUniversalPen(ChironTestCase):
     """Pen-state properties - pen starts False in universal mode."""
 
@@ -115,7 +109,6 @@ class TestUniversalDirectional(ChironTestCase):
 
     MODE = "universal"
 
-    @unittest.skip(_HEADING_SKIP)
     def test_dir_heading_nonneg_fail(self):
         """Heading is arbitrary at pc=0 (universally quantified) -> heading >= 0 fails."""
         self.load("turns_only.tl")

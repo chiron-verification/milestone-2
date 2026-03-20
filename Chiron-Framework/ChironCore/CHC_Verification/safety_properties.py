@@ -18,6 +18,27 @@ class Property:
         self.counterexample = None
         self.safety_range = None
 
+HEADING_GRID_SAFE = "SAFE"
+HEADING_GRID_VIOLATED = "VIOLATED"
+HEADING_GRID_UNKNOWN = "UNKNOWN"
+
+def check_heading_on_grid(fp, Inv, state):
+    heading = state[3]
+    on_grid = Or([heading == RealVal(deg) for deg in range(0, 360, 15)])
+    query_vars = z3util.get_vars(And(Inv(*state), Not(on_grid)))
+    result = fp.query(Exists(query_vars, And(Inv(*state), Not(on_grid))))
+    if result == sat:
+        print("Heading can reach a value that is not a multiple of 15 degrees.")
+        print("Verification status is UNKNOWN under strict 15-degree exact semantics.")
+        return HEADING_GRID_VIOLATED
+    elif result == unsat:
+        print("Heading is always a multiple of 15 degrees. Proceeding with exact verification.")
+        return HEADING_GRID_SAFE
+    else:
+        print("Could not determine if heading stays on the 15-degree grid.")
+        print("Verification status is UNKNOWN.")
+        return HEADING_GRID_UNKNOWN
+
 def check_property(fp, Inv, state, symbol_table, counter_table, property, mode):
     property_name = property.name
     property_expr = property.property_expr
@@ -82,6 +103,13 @@ if __name__ == "__main__":
     ir = astGenPass().visit(getParseTree(file_name))
     fp, Inv, state, next_state, symbol_table, counter_table = add_step_rules_to_fixed_point(ir, mode, param=params)
     print("Obtained fixed point object and invariant predicate. Ready to check properties.")
+
+    # Check that the heading stays on a 15-degree grid
+    heading_grid_status = check_heading_on_grid(fp, Inv, state)
+    if heading_grid_status != HEADING_GRID_SAFE:
+        print("Skipping property checks.")
+        print("Final verification result: UNKNOWN.")
+        sys.exit(0)
 
     # print the variables and counters for the user to reference when writing properties
     print("For turtle's x-coordinate, use 'xcor'")
