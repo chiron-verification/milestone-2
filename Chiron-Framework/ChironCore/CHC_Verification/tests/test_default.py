@@ -164,6 +164,48 @@ class TestDefaultDirectional(ChironTestCase):
         self.load("conditional.tl")
         self.assert_pass("heading_zero", self.v("heading") == 0)
 
+class TestDefaultHeadingGrid(ChironTestCase):
+    """15-degree heading grid checks in default mode."""
+
+    MODE = "default"
+
+    def test_heading_grid_turns_15_pass(self):
+        """turns_15.tl keeps heading on 15-degree grid."""
+        self.load("turns_15.tl")
+        grid_terms = [self.v("heading") == RealVal(deg) for deg in range(-360, 721, 15)]
+        self.assert_pass("heading_on_grid", Or(*grid_terms))
+
+    def test_heading_grid_turns_non_15_fail(self):
+        """turns_non_15.tl can reach heading not on grid."""
+        self.load("turns_non_15.tl")
+        grid_terms = [self.v("heading") == RealVal(deg) for deg in range(-360, 721, 15)]
+        self.assert_fail("heading_on_grid", Or(*grid_terms))
+
+    def test_heading_grid_turns_15_safe(self):
+        """turns_15.tl keeps heading on the 15-degree grid (pre-check)."""
+        self.load("turns_15.tl")
+        self.assert_heading_grid_safe()
+
+    def test_heading_grid_turns_non_15_unknown(self):
+        """turns_non_15.tl can leave grid -> verification treated as UNKNOWN."""
+        self.load("turns_non_15.tl")
+        self.assert_heading_grid_unknown()
+
+    def test_heading_grid_turns_15_heading_range_pass(self):
+        """Concrete property checked only after grid restriction passes."""
+        self.load("turns_15.tl")
+        self.assert_pass_after_heading_grid(
+            "heading_in_range",
+            And(self.v("heading") >= 0, self.v("heading") < 360),
+        )
+
+    def test_heading_grid_turns_non_15_heading_range_skipped(self):
+        """Concrete property is UNKNOWN when grid restriction is not safe."""
+        self.load("turns_non_15.tl")
+        self.assert_unknown_after_heading_grid(
+            "heading_in_range",
+            And(self.v("heading") >= 0, self.v("heading") < 360),
+        )
 
 class TestDefaultTrig(ChironTestCase):
     """

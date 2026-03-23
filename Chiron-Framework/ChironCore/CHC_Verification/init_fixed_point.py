@@ -39,8 +39,9 @@ def z3_fixed_point_object_with_start_state_set(ir, mode, params=None):
                         *user_vars, 
                         *counter_zeros)
 
-        fp.rule(ForAll(quantified, init_fact))
-        print("Added universal initial rule: xcor, ycor, heading, and all user variables are unconstrained.")
+        heading_on_grid = Or([heading == RealVal(deg) for deg in range(-360, 721, 15)])
+        fp.rule(ForAll(quantified, Implies(heading_on_grid, init_fact)))
+        print("Added universal initial rule: xcor, ycor, and user variables are unconstrained; heading is a multiple of 15 in [-360, 720].")
 
     elif (mode == "safety-range"):
         user_var_starts = list(state[5 + len(symbol_table) + len(counter_table):])  

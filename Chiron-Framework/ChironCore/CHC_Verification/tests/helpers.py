@@ -20,7 +20,14 @@ for _p in (_CHIRON_CORE, _CHC_DIR):
 from irhandler import getParseTree
 from ChironAST.builder import astGenPass
 from step_rules import add_step_rules_to_fixed_point
-from safety_properties import Property, check_property
+from safety_properties import (
+    Property,
+    check_property,
+    check_heading_on_grid,
+    HEADING_GRID_SAFE,
+    HEADING_GRID_VIOLATED,
+    HEADING_GRID_UNKNOWN,
+)
 from z3 import *
 
 PROGRAMS_DIR = os.path.join(_THIS_DIR, "programs")
@@ -61,6 +68,10 @@ def _run_check(fp, Inv, state, st, ct, prop, mode):
     with redirect_stdout(StringIO()):
         check_property(fp, Inv, state, st, ct, prop, mode)
 
+def _run_heading_check(fp, Inv, state):
+    """Run check_heading_on_grid with stdout suppressed."""
+    with redirect_stdout(StringIO()):
+        return check_heading_on_grid(fp, Inv, state)
 
 class ChironTestCase(unittest.TestCase):
 
@@ -122,3 +133,57 @@ class ChironTestCase(unittest.TestCase):
             f"Property '{name}': expected FAILED, got {prop.status}",
         )
         return prop
+
+    def assert_heading_grid_safe(self):
+        """Assert heading always stays on 15-degree grid."""
+        status = _run_heading_check(self._fp, self._Inv, self._state)
+        self.assertEqual(
+            status,
+            HEADING_GRID_SAFE,
+            f"Expected heading to stay on 15-degree grid, got {status}",
+        )
+        return status
+
+    def assert_heading_grid_violated(self):
+        """Assert heading can leave 15-degree grid."""
+        status = _run_heading_check(self._fp, self._Inv, self._state)
+        self.assertEqual(
+            status,
+            HEADING_GRID_VIOLATED,
+            f"Expected heading to leave 15-degree grid, got {status}",
+        )
+        return status
+
+    def assert_heading_grid_unknown(self):
+        """Assert heading-grid status is not safe (treated as UNKNOWN for verification)."""
+        status = _run_heading_check(self._fp, self._Inv, self._state)
+        if status == HEADING_GRID_SAFE:
+            self.fail("Expected heading-grid status to be UNKNOWN, but it was SAFE")
+        return status
+
+    def assert_pass_after_heading_grid(self, name: str, expr):
+        """Run heading-grid pre-check; skip property if grid is not safe."""
+        status = _run_heading_check(self._fp, self._Inv, self._state)
+        if status != HEADING_GRID_SAFE:
+            self.skipTest(f"Heading grid not safe ({status}); property '{name}' not checked")
+        return self.assert_pass(name, expr)
+
+    def assert_fail_after_heading_grid(self, name: str, expr):
+        """Run heading-grid pre-check; skip property if grid is not safe."""
+        status = _run_heading_check(self._fp, self._Inv, self._state)
+        if status != HEADING_GRID_SAFE:
+            self.skipTest(f"Heading grid not safe ({status}); property '{name}' not checked")
+        return self.assert_fail(name, expr)
+
+    def assert_unknown_after_heading_grid(self, name: str, expr):
+        """Assert UNKNOWN when heading grid is not safe; otherwise check property."""
+        status = _run_heading_check(self._fp, self._Inv, self._state)
+        if status != HEADING_GRID_SAFE:
+            prop = Property(name, expr)
+            _run_check(self._fp, self._Inv, self._state, self._st, self._ct, prop, self.MODE)
+            self.assertEqual(
+                prop.status, "UNKNOWN",
+                f"Property '{name}': expected UNKNOWN, got {prop.status}",
+            )
+            return prop
+        return self.assert_pass(name, expr)

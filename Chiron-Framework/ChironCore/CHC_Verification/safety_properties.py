@@ -24,7 +24,7 @@ HEADING_GRID_UNKNOWN = "UNKNOWN"
 
 def check_heading_on_grid(fp, Inv, state):
     heading = state[3]
-    on_grid = Or([heading == RealVal(deg) for deg in range(0, 360, 15)])
+    on_grid = Or([heading == RealVal(deg) for deg in range(-360, 721, 15)])
     query_vars = z3util.get_vars(And(Inv(*state), Not(on_grid)))
     result = fp.query(Exists(query_vars, And(Inv(*state), Not(on_grid))))
     if result == sat:
