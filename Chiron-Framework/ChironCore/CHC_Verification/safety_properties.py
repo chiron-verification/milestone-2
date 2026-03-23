@@ -4,6 +4,22 @@ from z3 import *
 from irhandler import getParseTree
 from ChironAST.builder import astGenPass
 import ast as _ast
+from enum import Enum
+
+class ReturnError(Enum):
+    SUCCESS = 0
+    ERROR = 1
+    UNKNOWN = 2
+
+class ReturnValue:
+    def __init__(self, return_expr=None):
+        self.expr = return_expr
+        self.advice = None   
+        self.error = ReturnError.UNKNOWN
+        self.status = 'UNKNOWN'
+        self.passing_properties = []
+        self.failing_properties = []
+        self.unknown_properties = []
 
 class Property:
     def __init__(self, name, property_expr):
@@ -64,41 +80,37 @@ def check_property(fp, Inv, state, symbol_table, counter_table, property, mode):
             subs += [(state[5 + n_user_vars + i], RealVal(0)) for i in range(n_counters)]
             precondition = substitute(inv, *subs)
             property.safety_range = simplify(precondition)
-
     else:
         print(f"Property '{property_name}' status is UNKNOWN. Solver returned: {result}")
         property.status = 'UNKNOWN'
-    
-if __name__ == "__main__":
-    # Command line arguments: 1) Chiron program file, 2) number of properties, 
-    # 3) mode (universal/safety-range/specific/default), 4) params dict (only for specific mode)
 
-    if len(sys.argv) < 4:
-        print("Usage: python safety_properties.py <chiron_program_file> <number_of_properties> <mode>")
-        sys.exit(1)
-    file_name = sys.argv[1]
-    mode = sys.argv[3]
+def CHC_Verification(file_name, mode, user_properties, params=None):
+
+    return_safety = ReturnValue()
 
     if mode not in ['universal', 'safety-range', 'specific', 'default']:
-        print("Invalid mode. Please choose 'universal', 'safety-range', 'specific', or 'default'.")
-        sys.exit(1)
+        return_safety.expr = "Invalid mode."
+        return_safety.advice = "Please choose 'universal', 'safety-range', 'specific', or 'default'."
+        return_safety.error = ReturnError.ERROR
+        return return_safety
         
-    params = None
     if mode == 'specific':
-        if len(sys.argv) < 5:
-            print("Error: 'specific' mode requires a params dict as 4th argument.")
-            print("Example: python safety_properties.py prog.tl 1 specific '{\":x\": 10}'")
-            sys.exit(1)
+        if params is None:
+            return_safety.expr = "Error: 'specific' mode requires a params string representing a dictionary of parameter values."
+            return_safety.advice = "Example: CHC_Verfication('prog.tl', 1, 'specific', {':x': 10})"
+            return_safety.error = ReturnError.ERROR
+            return return_safety
         try:
-            raw_params = _ast.literal_eval(sys.argv[4])
+            raw_params = _ast.literal_eval(params)
             params = {k.lstrip(':'): float(v) for k, v in raw_params.items()}
 
             if params is None :
                 raise ValueError("Params dict cannot be None for specific mode.")
-            
         except Exception as e:
-            print(f"Error parsing params dict: {e}")
-            sys.exit(1)
+            return_safety.expr = f"Error parsing params dict: {e}"
+            return_safety.advice = "Example: CHC_Verfication('prog.tl', 1, 'specific', {':x': 10})"
+            return_safety.error = ReturnError.ERROR
+            return return_safety
 
     ir = astGenPass().visit(getParseTree(file_name))
     fp, Inv, state, next_state, symbol_table, counter_table = add_step_rules_to_fixed_point(ir, mode, param=params)
@@ -107,22 +119,11 @@ if __name__ == "__main__":
     # Check that the heading stays on a 15-degree grid
     heading_grid_status = check_heading_on_grid(fp, Inv, state)
     if heading_grid_status != HEADING_GRID_SAFE:
-        print("Skipping property checks.")
-        print("Final verification result: UNKNOWN.")
-        sys.exit(0)
-
-    # print the variables and counters for the user to reference when writing properties
-    print("For turtle's x-coordinate, use 'xcor'")
-    print("For turtle's y-coordinate, use 'ycor'")
-    print("For turtle's heading, use 'heading'")
-    print("For turtle's pen state, use 'pendown'")
-    
-    print("State variables available for properties:")
-    for i, var in enumerate(symbol_table):
-        print(f"{i}. {var}")
-    print("\nCounters available for properties:")
-    for i, counter in enumerate(counter_table):
-        print(f"{i}. {counter}")
+        return_safety.expr = "Skipping property checks."
+        return_safety.advice = "Heading can reach non-15-degree values. Verification status is UNKNOWN under strict 15-degree exact semantics."
+        return_safety.error = ReturnError.SUCCESS
+        return_safety.status = 'UNKNOWN'
+        return return_safety
 
     eval_context = {
         'xcor': state[1], 'ycor': state[2], 'heading': state[3], 'pendown': state[4],
@@ -133,17 +134,18 @@ if __name__ == "__main__":
     for ctr_name, entry in counter_table.items():
         eval_context[ctr_name] = entry['z3_var']
 
-    num_properties = int(sys.argv[2])
     properties = []
-    for i in range(num_properties):
-        property_name = input(f"\nEnter name for property {i+1}: ")
-        property_expr_str = input(f"Enter the boolean expression for property '{property_name}': ")
+    for i in range(len(user_properties)):
+        property_name = user_properties[i].name
+        property_expr_str = user_properties[i].expr
         try:
             prop_expr = eval(property_expr_str, {"__builtins__": {}}, eval_context)
             properties.append(Property(property_name, prop_expr))
-        except Exception as e:
-            print(f"Error parsing property '{property_name}': {e}")
-            sys.exit(1)    
+        except Exception as e: 
+            return_safety.expr = f"Error parsing property '{property_name}': {e}"
+            return_safety.advice = "Please ensure the property expression is a valid boolean expression using the available state variables and logical operators."
+            return_safety.error = ReturnError.ERROR
+            return return_safety
 
     print("\n========== Step 5 ==========")
     safe = True
@@ -153,19 +155,32 @@ if __name__ == "__main__":
             print(f"Stopping further checks since property '{property.name}' failed.")
             print(f"Counterexample for property '{property.name}': {property.counterexample}")
             safe = False
+            return_safety.failing_properties.append([property.name, property.counterexample])
             break
         elif property.status == 'UNKNOWN':
             print(f"Stopping further checks since property '{property.name}' status is UNKNOWN.")
             safe = False
+            return_safety.unknown_properties.append(property.name)
             break
         else:
             print(f"Property '{property.name}' PASSED.")
             print(f"Invariant for property '{property.name}': {property.invariant}")
             if mode == 'safety-range':
                 print(f"Safety range for property '{property.name}': {property.safety_range}")
+            return_safety.passing_properties.append([property.name, property.invariant, property.safety_range])
 
     if safe:
+        return_safety.expr = "All properties satisfied."
+        return_safety.advice = "The program is safe to run with respect to the specified properties."
+        return_safety.error = ReturnError.SUCCESS
+        return_safety.status = 'PASSED'
         print("All properties satisfied, the program is safe to run.")
     else:
+        return_safety.expr = "Some properties failed or are UNKNOWN."
+        return_safety.advice = "The program is not safe to run with respect to the specified properties. Please review the failing properties and their counterexamples or unknown status."
+        return_safety.error = ReturnError.SUCCESS
+        return_safety.status = 'FAILED' if return_safety.failing_properties else 'UNKNOWN'
         print("Some properties failed. The program is not safe to run.")
+
     print("\n========== Step 5 Completed ==========")
+    return return_safety
