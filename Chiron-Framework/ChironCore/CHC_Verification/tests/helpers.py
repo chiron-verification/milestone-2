@@ -21,8 +21,7 @@ from irhandler import getParseTree
 from ChironAST.builder import astGenPass
 from step_rules import add_step_rules_to_fixed_point
 from safety_properties import (
-    Property,
-    check_property,
+    CHC_Verification,
     check_heading_on_grid,
     HEADING_GRID_SAFE,
     HEADING_GRID_VIOLATED,
@@ -31,8 +30,15 @@ from safety_properties import (
 from z3 import *
 
 PROGRAMS_DIR = os.path.join(_THIS_DIR, "programs")
-TIMEOUT_MS   = 15_000   # Z3 hint - not always respected by SPACER
+TIMEOUT_MS   = 15_000
 TIMING       = "-t" in sys.argv
+
+
+class UserProperty:
+    """Property with a string expression for passing to CHC_Verification."""
+    def __init__(self, name: str, expr: str):
+        self.name = name
+        self.expr = expr
 
 
 def program_path(name: str) -> str:
@@ -47,57 +53,44 @@ def build_fp(name: str, mode: str, params=None):
     return fp, Inv, state, ns, st, ct
 
 
-def make_context(state, st, ct):
-    """Build a name->Z3-var dict from state tuple + symbol/counter tables."""
-    ctx = {
-        "xcor":    state[1],
-        "ycor":    state[2],
-        "heading": state[3],
-        "pendown": state[4],
-        "And": And, "Or": Or, "Not": Not, "Implies": Implies,
-    }
-    for name, entry in st.items():
-        ctx[name] = entry["z3_var"]
-    for name, entry in ct.items():
-        ctx[name] = entry["z3_var"]
-    return ctx
-
-
-def _run_check(fp, Inv, state, st, ct, prop, mode):
-    """Run check_property with stdout suppressed."""
-    with redirect_stdout(StringIO()):
-        check_property(fp, Inv, state, st, ct, prop, mode)
-
 def _run_heading_check(fp, Inv, state):
     """Run check_heading_on_grid with stdout suppressed."""
     with redirect_stdout(StringIO()):
         return check_heading_on_grid(fp, Inv, state)
+
+
+def _run_api_check(file_path, mode, name, expr_str, params=None):
+    """Call CHC_Verification with a single property, stdout suppressed.
+    params is a plain dict; converts to colon-keyed string for CHC_Verification."""
+    params_str = None
+    if params is not None:
+        params_str = str({':' + k: v for k, v in params.items()})
+    with redirect_stdout(StringIO()):
+        return CHC_Verification(file_path, mode, [UserProperty(name, expr_str)], params_str)
+
 
 class ChironTestCase(unittest.TestCase):
 
     MODE: str = None
 
     def load(self, tl_file: str, params=None):
-        """Build the fixedpoint for *tl_file* under ``self.MODE``."""
+        """Store file info; also build fp for heading-grid pre-checks."""
+        self._tl_file = tl_file
+        self._file_path = program_path(tl_file)
+        self._params = params
         t0 = time.perf_counter()
         with redirect_stdout(StringIO()):
             self._fp, self._Inv, self._state, self._ns, self._st, self._ct = \
                 build_fp(tl_file, self.MODE, params)
         self._build_time = time.perf_counter() - t0
-        self._tl_file = tl_file
-        self._ctx = make_context(self._state, self._st, self._ct)
 
-    def v(self, name: str):
-        return self._ctx[name]
-
-    def assert_pass(self, name: str, expr):
+    def assert_pass(self, name: str, expr: str):
         """Assert the property is an invariant (PASSED).
-        If the solver returns UNKNOWN the test is skipped with a message."""
-        prop = Property(name, expr)
+        If the solver returns UNKNOWN the test is skipped."""
         t1 = time.perf_counter()
-        _run_check(self._fp, self._Inv, self._state, self._st, self._ct, prop, self.MODE)
+        result = _run_api_check(self._file_path, self.MODE, name, expr, self._params)
         solve_time = time.perf_counter() - t1
-        if prop.status == "UNKNOWN":
+        if result.status == 'UNKNOWN':
             self.skipTest(f"Property '{name}': solver could not determine result (UNKNOWN)")
         if TIMING:
             print(
@@ -107,19 +100,18 @@ class ChironTestCase(unittest.TestCase):
                 file=sys.stderr,
             )
         self.assertEqual(
-            prop.status, "PASSED",
-            f"Property '{name}': expected PASSED, got {prop.status}",
+            result.status, "PASSED",
+            f"Property '{name}': expected PASSED, got {result.status}",
         )
-        return prop
+        return result
 
-    def assert_fail(self, name: str, expr):
+    def assert_fail(self, name: str, expr: str):
         """Assert the property is NOT an invariant (FAILED).
-        If the solver returns UNKNOWN the test is skipped with a message."""
-        prop = Property(name, expr)
+        If the solver returns UNKNOWN the test is skipped."""
         t1 = time.perf_counter()
-        _run_check(self._fp, self._Inv, self._state, self._st, self._ct, prop, self.MODE)
+        result = _run_api_check(self._file_path, self.MODE, name, expr, self._params)
         solve_time = time.perf_counter() - t1
-        if prop.status == "UNKNOWN":
+        if result.status == 'UNKNOWN':
             self.skipTest(f"Property '{name}': solver could not determine result (UNKNOWN)")
         if TIMING:
             print(
@@ -129,10 +121,10 @@ class ChironTestCase(unittest.TestCase):
                 file=sys.stderr,
             )
         self.assertEqual(
-            prop.status, "FAILED",
-            f"Property '{name}': expected FAILED, got {prop.status}",
+            result.status, "FAILED",
+            f"Property '{name}': expected FAILED, got {result.status}",
         )
-        return prop
+        return result
 
     def assert_heading_grid_safe(self):
         """Assert heading always stays on 15-degree grid."""
@@ -161,29 +153,33 @@ class ChironTestCase(unittest.TestCase):
             self.fail("Expected heading-grid status to be UNKNOWN, but it was SAFE")
         return status
 
-    def assert_pass_after_heading_grid(self, name: str, expr):
-        """Run heading-grid pre-check; skip property if grid is not safe."""
-        status = _run_heading_check(self._fp, self._Inv, self._state)
-        if status != HEADING_GRID_SAFE:
-            self.skipTest(f"Heading grid not safe ({status}); property '{name}' not checked")
-        return self.assert_pass(name, expr)
+    def assert_pass_after_heading_grid(self, name: str, expr: str):
+        """Run via CHC_Verification; skip property if heading grid is not safe."""
+        result = _run_api_check(self._file_path, self.MODE, name, expr, self._params)
+        if result.status == 'UNKNOWN':
+            self.skipTest(f"Heading grid not safe; property '{name}' not checked")
+        self.assertEqual(
+            result.status, "PASSED",
+            f"Property '{name}': expected PASSED after heading grid check, got {result.status}",
+        )
+        return result
 
-    def assert_fail_after_heading_grid(self, name: str, expr):
-        """Run heading-grid pre-check; skip property if grid is not safe."""
-        status = _run_heading_check(self._fp, self._Inv, self._state)
-        if status != HEADING_GRID_SAFE:
-            self.skipTest(f"Heading grid not safe ({status}); property '{name}' not checked")
-        return self.assert_fail(name, expr)
+    def assert_fail_after_heading_grid(self, name: str, expr: str):
+        """Run via CHC_Verification; skip property if heading grid is not safe."""
+        result = _run_api_check(self._file_path, self.MODE, name, expr, self._params)
+        if result.status == 'UNKNOWN':
+            self.skipTest(f"Heading grid not safe; property '{name}' not checked")
+        self.assertEqual(
+            result.status, "FAILED",
+            f"Property '{name}': expected FAILED after heading grid check, got {result.status}",
+        )
+        return result
 
-    def assert_unknown_after_heading_grid(self, name: str, expr):
-        """Assert UNKNOWN when heading grid is not safe; otherwise check property."""
-        status = _run_heading_check(self._fp, self._Inv, self._state)
-        if status != HEADING_GRID_SAFE:
-            prop = Property(name, expr)
-            _run_check(self._fp, self._Inv, self._state, self._st, self._ct, prop, self.MODE)
-            self.assertEqual(
-                prop.status, "UNKNOWN",
-                f"Property '{name}': expected UNKNOWN, got {prop.status}",
-            )
-            return prop
-        return self.assert_pass(name, expr)
+    def assert_unknown_after_heading_grid(self, name: str, expr: str):
+        """Assert CHC_Verification returns UNKNOWN when heading grid is not safe."""
+        result = _run_api_check(self._file_path, self.MODE, name, expr, self._params)
+        self.assertEqual(
+            result.status, "UNKNOWN",
+            f"Property '{name}': expected UNKNOWN (heading grid not safe), got {result.status}",
+        )
+        return result
