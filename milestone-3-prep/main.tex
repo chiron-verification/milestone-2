@@ -1,0 +1,136 @@
+\documentclass{article}
+\usepackage[final]{neurips_2024}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{verbatim}
+\usepackage{microtype}
+\usepackage{float}
+\usepackage{tikz}
+\usepackage{pgf-pie}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+\makeatletter
+\renewcommand{\section}{%
+  \@startsection{section}{1}{\z@}%
+                {-2.0ex \@plus -0.5ex \@minus -0.2ex}%
+                { 1.5ex \@plus  0.3ex \@minus  0.2ex}%
+                {\fontsize{15}{16.8}\selectfont\bf\raggedright}%
+}
+\renewcommand{\subsection}{%
+  \@startsection{subsection}{2}{\z@}%
+                {-1.8ex \@plus -0.5ex \@minus -0.2ex}%
+                { 0.8ex \@plus  0.2ex}%
+                {\fontsize{12}{14.4}\selectfont\bf\raggedright}%
+}
+\renewcommand{\subsubsection}{%
+  \@startsection{subsubsection}{3}{\z@}%
+                {-1.5ex \@plus -0.5ex \@minus -0.2ex}%
+                { 0.5ex \@plus  0.2ex}%
+                {\fontsize{10}{12}\selectfont\bf\raggedright}%
+}
+\makeatother
+
+\lstdefinestyle{terminal}{
+    backgroundcolor=\color{blue!5},
+    basicstyle=\ttfamily\small,
+    frame=single,
+    rulecolor=\color{blue!30},
+    breaklines=true,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false
+}
+
+
+\title{Milestone Report: Safety Verification of Chiron IR using Constrained Horn Clauses}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Up Next}
+
+\subsection{Testing}
+\begin{enumerate}[leftmargin=*]
+\item \textbf{Metamorphic tests.} Generate semantically equivalent program
+pairs (e.g., \texttt{right 360} vs no-op, \texttt{forward d; backward d} vs
+no-op) and assert identical verification outcomes to detect encoding drift.
+\item \textbf{Property fuzzer.} Randomly synthesize compound properties over
+$(x,y,\texttt{heading},\texttt{pen},\texttt{vars})$, classify via a bounded
+interpreter, and flag mismatches as potential false positives/negatives.
+\item \textbf{Adversarial grid tests.} Craft programs that leave the 15-degree
+grid or hit \texttt{heading}=360 and ensure the tool reports \texttt{UNKNOWN},
+not spurious \texttt{PASSED}.
+\item \textbf{Symmetry checks.} Mirror/rotate programs and properties across
+axes and verify that outcomes transform predictably, catching asymmetries in
+the encoding.
+\item \textbf{Model-to-trace validator.} Decode Z3 models into traces and
+re-check each step against the operational semantics to eliminate spurious
+models.
+\item \textbf{Compound properties.} Build test programs with properties that
+combine geometric bounds, pen state, and user variables (e.g.,
+``in box $\land$ pen up $\land$ fuel $\ge 0$'') and verify that the solver can
+prove conjunctions without fragile splitting.
+\item \textbf{Canvas-marking tests.} Introduce regression cases where the
+expected outcome is ``region $R$ is never marked'' and ``region $S$ is always
+marked when reached'', stressing the interaction of motion, pen state, and
+state predicates.
+\item \textbf{Semantic cross-checks.} For select programs, run a bounded
+interpreter to generate traces and assert agreement with CHC verdicts (PASSED
+implies no violating trace within bounds; FAILED implies a concrete violating
+trace).
+\item \textbf{Stress and scalability.} Add deep-loop and large-nesting programs
+with combined arithmetic and geometry, then track build time, solve time, and
+\texttt{UNKNOWN} rate to quantify improvements.
+\item \textbf{Mode correctness.} Validate that \texttt{default},
+\texttt{universal}, \texttt{safety-range}, and \texttt{specific} behave as
+documented by checking initial-state constraints and ghost-parameter behavior
+under controlled fixtures.
+\end{enumerate}
+
+
+\subsection{Extensions}
+\begin{enumerate}[leftmargin=*]
+\item \textbf{Exact marked-region extraction.} Compute the sets of boxes that
+are \emph{guaranteed marked}, \emph{possibly marked}, and \emph{guaranteed
+unmarked}, and expose them as a first-class artifact for downstream queries.
+\item \textbf{Spatial coverage queries.} Support questions like ``which boxes
+can be marked within $N$ steps'' and ``which boxes are inevitably marked'',
+bridging reachability and inevitability.
+\item \textbf{Temporal properties.} Add a small always/eventually fragment for
+properties such as ``eventually pen up after drawing'' or ``always inside a
+region after step $k$''.
+\item \textbf{Counterexample-guided refinement.} When \texttt{UNKNOWN}, split
+heading buckets or add strengthening lemmas automatically based on the model.
+\item \textbf{User-defined invariant templates.} Allow lightweight inductive
+sketches to steer SPACER and reduce timeouts on complex properties.
+\item \textbf{Canvas region accounting.} Extend the semantics to identify
+\emph{which} discrete boxes/cells on the canvas are guaranteed to be marked,
+possibly marked, or guaranteed unmarked. Expose this as a queryable artifact
+and allow properties like ``only these boxes are ever drawn''.
+\item \textbf{Property macros with quantifiers.} Add higher-level predicates
+such as \texttt{in\_box}, \texttt{distance<=r}, \texttt{never\_draws(R)}, and
+\texttt{pen\_down\_only\_in(S)}, compiled to CHC constraints to reduce user
+error and support compound properties.
+\item \textbf{Parametric verification.} Generalize \texttt{specific} mode to
+intervals and symbolic ranges, enabling sensitivity analysis and ``for all
+starts in range'' guarantees.
+\item \textbf{Efficient motion encoding.} Replace expensive nonlinear trig with
+sound, piecewise-linear over-approximations per heading bucket, then measure
+\texttt{UNKNOWN} reductions on heading-heavy programs.
+\item \textbf{Invariant synthesis hooks.} Add optional linear templates and
+lightweight candidate generation to strengthen invariants before CHC queries.
+\end{enumerate}
+
+
+
+\end{document}
