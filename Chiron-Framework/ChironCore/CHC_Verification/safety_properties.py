@@ -5,6 +5,8 @@ from irhandler import getParseTree
 from ChironAST.builder import astGenPass
 import ast as _ast
 from enum import Enum
+from heading_grid import heading_on_grid
+from z3 import z3util
 
 class ReturnError(Enum):
     SUCCESS = 0
@@ -32,27 +34,6 @@ class Property:
         self.status = 'UNKNOWN'
         self.invariant = None
         self.counterexample = None
-
-HEADING_GRID_SAFE = "SAFE"
-HEADING_GRID_VIOLATED = "VIOLATED"
-HEADING_GRID_UNKNOWN = "UNKNOWN"
-
-def check_heading_on_grid(fp, Inv, state):
-    heading = state[3]
-    on_grid = Or([heading == RealVal(deg) for deg in range(-360, 721, 15)])
-    query_vars = z3util.get_vars(And(Inv(*state), Not(on_grid)))
-    result = fp.query(Exists(query_vars, And(Inv(*state), Not(on_grid))))
-    if result == sat:
-        print("Heading can reach a value that is not a multiple of 15 degrees.")
-        print("Verification status is UNKNOWN under strict 15-degree exact semantics.")
-        return HEADING_GRID_VIOLATED
-    elif result == unsat:
-        print("Heading is always a multiple of 15 degrees. Proceeding with exact verification.")
-        return HEADING_GRID_SAFE
-    else:
-        print("Could not determine if heading stays on the 15-degree grid.")
-        print("Verification status is UNKNOWN.")
-        return HEADING_GRID_UNKNOWN
 
 def check_property(fp, Inv, state, symbol_table, counter_table, property, mode):
     property_name = property.name
@@ -100,17 +81,31 @@ def CHC_Verification(file_name, mode, user_properties, params=None):
             return return_safety
 
     ir = astGenPass().visit(getParseTree(file_name))
-    fp, Inv, state, next_state, symbol_table, counter_table = add_step_rules_to_fixed_point(ir, mode, param=params)
+    fp, Inv, BadHeading, state, next_state, symbol_table, counter_table = add_step_rules_to_fixed_point(ir, mode, param=params)
     print("Obtained fixed point object and invariant predicate. Ready to check properties.")
 
-    # Check that the heading stays on a 15-degree grid
-    heading_grid_status = check_heading_on_grid(fp, Inv, state)
-    if heading_grid_status != HEADING_GRID_SAFE:
+    # query BadHeading to see if we can reach a state where the heading is not on the 15-degree grid
+    query_vars = z3util.get_vars(BadHeading(*state))
+    heading_grid_status = fp.query(Exists(query_vars, BadHeading(*state)))
+    if heading_grid_status == sat:
+        print("Heading can reach a value that is not a multiple of 15 degrees.")
+        print("Verification status is UNKNOWN under strict 15-degree exact semantics.")
         return_safety.expr = "Skipping property checks."
         return_safety.advice = "Heading can reach non-15-degree values. Verification status is UNKNOWN under strict 15-degree exact semantics."
         return_safety.error = ReturnError.SUCCESS
         return_safety.status = 'UNKNOWN'
         return return_safety
+    elif heading_grid_status == unsat:
+        print("Heading is always a multiple of 15 degrees. Proceeding with exact verification.")
+    else:
+        print("Could not determine if heading stays on the 15-degree grid.")
+        print("Verification status is UNKNOWN.")
+        return_safety.expr = "Skipping property checks."
+        return_safety.advice = "Could not determine if heading stays on the 15-degree grid. Verification status is UNKNOWN."
+        return_safety.error = ReturnError.SUCCESS
+        return_safety.status = 'UNKNOWN'
+        return return_safety
+
 
     eval_context = {
         'xcor': state[1], 'ycor': state[2], 'heading': state[3], 'pendown': state[4],

@@ -39,7 +39,19 @@ def z3_fixed_point_invariant_generation(ir, mode):
 
         print("Created Z3 variables for program state components, user variables, and loop counters.")
 
-        return Inv, state, next_state, symbol_table, counter_table
+        BadHeading = Function(
+            'BadHeading',
+            IntSort(),      # pc
+            RealSort(),     # xcor
+            RealSort(),     # ycor
+            RealSort(),     # heading
+            BoolSort(),     # pendown
+            *[RealSort() for _ in symbol_table],
+            *[RealSort() for _ in counter_table],
+            BoolSort()
+        )
+
+        return Inv, BadHeading, state, next_state, symbol_table, counter_table
 
     else :
         print(f"Error: Invalid mode '{mode}' specified. Supported modes are 'default', 'universal' and 'specific'.")

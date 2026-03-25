@@ -1,9 +1,10 @@
 from z3_fixed_point import *
 import sys
 from z3 import *
+from heading_grid import heading_on_grid
 
 def z3_fixed_point_object_with_start_state_set(ir, mode, params=None):
-    Inv, state, next_state, symbol_table, counter_table = z3_fixed_point_invariant_generation(ir, mode)
+    Inv, BadHeading, state, next_state, symbol_table, counter_table = z3_fixed_point_invariant_generation(ir, mode)
     print("Obtained the invariant relation, state variables, and symbol/counter tables from the IR.")
 
     print("\n========== Step 3 ==========")
@@ -11,6 +12,8 @@ def z3_fixed_point_object_with_start_state_set(ir, mode, params=None):
     fp.set(engine='spacer')
     fp.register_relation(Inv)
     print("Initialized the Z3 fixedpoint object and registered the invariant relation.")
+    fp.register_relation(BadHeading)
+    print("Registered the BadHeading relation for checking heading grid violations.")
 
     if (mode == "default"):
         start_state = (
@@ -35,13 +38,12 @@ def z3_fixed_point_object_with_start_state_set(ir, mode, params=None):
                         xcor, 
                         ycor, 
                         heading,
-                        BoolVal(False), 
+                        BoolVal(True), 
                         *user_vars, 
                         *counter_zeros)
 
-        heading_on_grid = Or([heading == RealVal(deg) for deg in range(-360, 721, 15)])
-        fp.rule(ForAll(quantified, Implies(heading_on_grid, init_fact)))
-        print("Added universal initial rule: xcor, ycor, and user variables are unconstrained; heading is a multiple of 15 in [-360, 720].")
+        fp.rule(ForAll(quantified, Implies(heading_on_grid(heading), init_fact)))
+        print("Added universal initial rule: xcor, ycor, and user variables are unconstrained; heading is constrained to be a multiple of 15 degrees, and pc=0, pendown=True, counters=0.")
 
     elif (mode == "specific"):
         for var_name in symbol_table:
@@ -65,4 +67,4 @@ def z3_fixed_point_object_with_start_state_set(ir, mode, params=None):
         print(f"Error: Invalid mode '{mode}' specified. Supported modes are 'default', 'universal' and 'specific'.")
         sys.exit(1)
 
-    return fp, Inv, state, next_state, symbol_table, counter_table
+    return fp, BadHeading, Inv, state, next_state, symbol_table, counter_table
