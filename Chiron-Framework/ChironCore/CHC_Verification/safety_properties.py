@@ -32,7 +32,6 @@ class Property:
         self.status = 'UNKNOWN'
         self.invariant = None
         self.counterexample = None
-        self.safety_range = None
 
 HEADING_GRID_SAFE = "SAFE"
 HEADING_GRID_VIOLATED = "VIOLATED"
@@ -68,18 +67,6 @@ def check_property(fp, Inv, state, symbol_table, counter_table, property, mode):
         print(f"Property '{property_name}' is an invariant. No counterexample exists.")
         property.status = 'PASSED'
         property.invariant = fp.get_answer()
-        if mode == 'safety-range':
-            inv = property.invariant
-            n_user_vars = len(symbol_table)
-            n_counters = len(counter_table)
-            ghost_params = list(state[5 + n_user_vars + n_counters:])
-            user_vars = list(state[5 : 5 + n_user_vars])
-            subs = [(state[0], IntVal(0)), (state[1], RealVal(0)), (state[2], RealVal(0)),
-                    (state[3], RealVal(0)), (state[4], BoolVal(False))]
-            subs += [(uv, gp) for uv, gp in zip(user_vars, ghost_params)]
-            subs += [(state[5 + n_user_vars + i], RealVal(0)) for i in range(n_counters)]
-            precondition = substitute(inv, *subs)
-            property.safety_range = simplify(precondition)
     else:
         print(f"Property '{property_name}' status is UNKNOWN. Solver returned: {result}")
         property.status = 'UNKNOWN'
@@ -88,9 +75,9 @@ def CHC_Verification(file_name, mode, user_properties, params=None):
 
     return_safety = ReturnValue()
 
-    if mode not in ['universal', 'safety-range', 'specific', 'default']:
+    if mode not in ['universal', 'specific', 'default']:
         return_safety.expr = "Invalid mode."
-        return_safety.advice = "Please choose 'universal', 'safety-range', 'specific', or 'default'."
+        return_safety.advice = "Please choose 'universal', 'specific', or 'default'."
         return_safety.error = ReturnError.ERROR
         return return_safety
         
@@ -165,9 +152,7 @@ def CHC_Verification(file_name, mode, user_properties, params=None):
         else:
             print(f"Property '{property.name}' PASSED.")
             print(f"Invariant for property '{property.name}': {property.invariant}")
-            if mode == 'safety-range':
-                print(f"Safety range for property '{property.name}': {property.safety_range}")
-            return_safety.passing_properties.append([property.name, property.invariant, property.safety_range])
+            return_safety.passing_properties.append([property.name, property.invariant])
 
     if safe:
         return_safety.expr = "All properties satisfied."

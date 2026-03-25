@@ -19,7 +19,6 @@ tests/
   helpers.py          -- shared base class and utility functions
   run_all.py          -- top-level test runner
   test_default.py     -- tests for "default" mode
-  test_safety_range.py-- tests for "safety-range" mode
   test_specific.py    -- tests for "specific" mode
   test_universal.py   -- tests for "universal" mode
   programs/           -- .tl Chiron source programs used as fixtures

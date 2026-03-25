@@ -43,24 +43,6 @@ def z3_fixed_point_object_with_start_state_set(ir, mode, params=None):
         fp.rule(ForAll(quantified, Implies(heading_on_grid, init_fact)))
         print("Added universal initial rule: xcor, ycor, and user variables are unconstrained; heading is a multiple of 15 in [-360, 720].")
 
-    elif (mode == "safety-range"):
-        user_var_starts = list(state[5 + len(symbol_table) + len(counter_table):])  
-        counter_zeros = [RealVal(0) for _ in counter_table]
-        init_fact = Inv(IntVal(0),
-                        RealVal(0), 
-                        RealVal(0), 
-                        RealVal(0), 
-                        BoolVal(False),
-                        *user_var_starts,   
-                        *counter_zeros,
-                        *user_var_starts)   
-        
-        if user_var_starts:
-            fp.rule(ForAll(user_var_starts, init_fact))
-        else:
-            fp.fact(init_fact)
-        print("Added safety-range initial rule: user variables are initialized to their start values (ghost parameters), which are universally quantified.")
-
     elif (mode == "specific"):
         for var_name in symbol_table:
             if var_name not in params:
@@ -80,7 +62,7 @@ def z3_fixed_point_object_with_start_state_set(ir, mode, params=None):
         print("Added specific initial rule based on provided parameters, with defaults for any missing variables.")
     
     else :
-        print(f"Error: Invalid mode '{mode}' specified. Supported modes are 'default', 'universal', 'safety-range' and 'specific'.")
+        print(f"Error: Invalid mode '{mode}' specified. Supported modes are 'default', 'universal' and 'specific'.")
         sys.exit(1)
 
     return fp, Inv, state, next_state, symbol_table, counter_table

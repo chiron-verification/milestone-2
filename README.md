@@ -23,7 +23,6 @@ The project implements a safety verifier for Chiron Turtle programs by translati
 | `default` | Safety from a fixed concrete start state (all numeric values initialized to `0`, `pendown=False`) |
 | `universal` | Safety for all initial values of turtle coordinates/heading and user variables |
 | `specific` | Safety for a user-provided concrete initial variable assignment |
-| `safety-range` | Symbolic characterization of safe initial regions for user variables (via ghost start-value parameters) |
 
 ### How verification is done
 1. Parse `.tl` source into linear Chiron IR (instruction + jump-offset form).
@@ -56,13 +55,13 @@ The project implements a safety verifier for Chiron Turtle programs by translati
         - Input : A Chiron IR Object.
         - Output : A Z3 Fixed Point object with the appropriate function signatures for the CHC verification. Tuples for state and next_state.
         - ``parse_variables_from_ir`` function is reused to get the symbol table and counter table for the variables in the Chiron IR.
-        - ``z3_fixed_point_invariant_generation`` function creates mode-aware function signatures for `default`, `universal`, `specific`, and `safety-range` (ghost start-value parameters are added in `safety-range`).
+        - ``z3_fixed_point_invariant_generation`` function creates mode-aware function signatures for `default`, `universal`, `specific`.
 3. **Create Fixed Point Object and set Initial Conditions**:
     - Code File : `Chiron-Framework/ChironCore/CHC_Verification/init_fixed_point.py`
         - Input : A Chiron IR Object.
         - Output : A Z3 Fixed Point object with the initial conditions set for the CHC verification.
         - ``z3_fixed_point_invariant_generation`` function is used to set the signature for the state and next_state prediactes, as well as the ``Inv`` predicate.
-        - ``z3_fixed_point_object_with_start_state_set`` function initializes the Z3 Fixed Point object, registers the invariant relation, and adds mode-specific initial rules for `default`, `universal`, `specific`, and `safety-range`.
+        - ``z3_fixed_point_object_with_start_state_set`` function initializes the Z3 Fixed Point object, registers the invariant relation, and adds mode-specific initial rules for `default`, `universal`, `specific`.
 4. **Translate Chiron IR to CHC Rules**:
     - Code File : `Chiron-Framework/ChironCore/CHC_Verification/step_rules.py`
         - Input : A Chiron IR Object, Z3 Fixed Point object, invariant relation, state and next_state tuples, symbol table and counter table.
@@ -75,12 +74,12 @@ The project implements a safety verifier for Chiron Turtle programs by translati
 5. **Check Safety Properties**:
     - Code File : `Chiron-Framework/ChironCore/CHC_Verification/safety_properties.py`
         - Input (CLI) : `python safety_properties.py <chiron_program_file> <number_of_properties> <mode> [params_dict_for_specific]`
-            - `<mode>` must be one of `default`, `universal`, `specific`, `safety-range`.
+            - `<mode>` must be one of `default`, `universal`, `specific`.
             - for `specific`, an additional params dictionary is required (example: `'{\":x\": 10, \"y\": 20}'`).
         - Input (interactive) : for each property, user enters
             - property name (string label),
             - property boolean expression over available variables (`xcor`, `ycor`, `heading`, `pendown`, user vars, counters) using `And/Or/Not` and comparisons.
-        - Output : For each property, prints `PASSED` / `FAILED` / `UNKNOWN`; on failure prints a counterexample; in `safety-range` mode also prints inferred safety-range constraints for passing properties.
+        - Output : For each property, prints `PASSED` / `FAILED` / `UNKNOWN`; on failure prints a counterexample
         - ``check_property`` queries reachability of violating states (`Inv(state) AND NOT(property)`), then classifies result as invariant proved (`unsat`) or violated (`sat`).
 
 ## Usage
@@ -98,7 +97,7 @@ python CHC_Verification/safety_properties.py <path-to-turtle-file> <num-properti
 |---|---|
 | `<path-to-turtle-file>` | Path to a Chiron Turtle (`.tl`) source file |
 | `<num-properties>` | Number of safety properties to check interactively |
-| `<mode>` | One of `default`, `universal`, `specific`, `safety-range` |
+| `<mode>` | One of `default`, `universal`, `specific` |
 | `[params]` | Required only for `specific`; dictionary of initial user-variable values |
 
 For `specific` mode, pass a dictionary string as the 4th argument, for example:
@@ -136,13 +135,7 @@ python CHC_Verification/safety_properties.py ../../test_files/forward.tl 2 defau
 ```bash
 python CHC_Verification/safety_properties.py ../../test_files/nested_loops.tl 1 universal
 ```
-
-#### Example 3 - Safety-range mode
-```bash
-python CHC_Verification/safety_properties.py ../../test_files/nested_loops.tl 1 safety-range
-```
-
-#### Example 4 - Specific mode
+#### Example 3 - Specific mode
 ```bash
 python CHC_Verification/safety_properties.py CHC_Verification/test_files/variable_arithmetic/assignment.tl 1 specific '{"a": 0}'
 ```
