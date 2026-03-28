@@ -42,8 +42,10 @@ def z3_fixed_point_object_with_start_state_set(ir, mode, params=None):
                         *user_vars, 
                         *counter_zeros)
 
-        fp.rule(ForAll(quantified, Implies(heading_on_grid(heading), init_fact)))
-        print("Added universal initial rule: xcor, ycor, and user variables are unconstrained; heading is constrained to be a multiple of 15 degrees, and pc=0, pendown=True, counters=0.")
+        int_user_vars = And([IsInt(v) for v in user_vars])
+        init_guard = And(heading_on_grid(heading), int_user_vars)
+        fp.rule(ForAll(quantified, Implies(init_guard, init_fact)))
+        print("Added universal initial rule: xcor, ycor, and user variables are unconstrained; user variables are integers; heading is constrained to be a multiple of 15 degrees, and pc=0, pendown=True, counters=0.")
 
     elif (mode == "specific"):
         for var_name in symbol_table:

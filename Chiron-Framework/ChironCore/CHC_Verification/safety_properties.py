@@ -7,6 +7,7 @@ import ast as _ast
 from enum import Enum
 from heading_grid import heading_on_grid
 from z3 import z3util
+from enum import StrEnum, auto
 
 class ReturnError(Enum):
     SUCCESS = 0
@@ -23,6 +24,10 @@ class ReturnValue:
         self.failing_properties = []
         self.unknown_properties = []
 
+class Hints(StrEnum):
+    CHECK_HEADING_ALWAYS_ON_GRID = auto()
+    HEADING_MUL_15_ALWAYS = auto()
+
 class Property:
     def __init__(self, name, property_expr):
         self.name = name
@@ -35,11 +40,12 @@ class Property:
         self.invariant = None
         self.counterexample = None
 
-def check_property(fp, Inv, state, symbol_table, counter_table, property, mode):
+def check_property(fp, Inv, state, symbol_table, counter_table, property, mode, assumptions=None):
     property_name = property.name
     property_expr = property.property_expr
-    query_vars = z3util.get_vars(And(Inv(*state), Not(property_expr)))
-    result = fp.query(Exists(query_vars, And(Inv(*state), Not(property_expr))))
+    base = And(Inv(*state), Not(property_expr)) if assumptions is None else And(Inv(*state), assumptions, Not(property_expr))
+    query_vars = z3util.get_vars(base)
+    result = fp.query(Exists(query_vars, base))
     if result == sat:
         print(f"Property '{property_name}' is NOT an invariant. Counterexample found.")
         property.status = 'FAILED'
@@ -52,7 +58,7 @@ def check_property(fp, Inv, state, symbol_table, counter_table, property, mode):
         print(f"Property '{property_name}' status is UNKNOWN. Solver returned: {result}")
         property.status = 'UNKNOWN'
 
-def CHC_Verification(file_name, mode, user_properties, params=None):
+def CHC_Verification(file_name, mode, user_properties, params=None, hints=None):
 
     return_safety = ReturnValue()
 
@@ -79,32 +85,51 @@ def CHC_Verification(file_name, mode, user_properties, params=None):
             return_safety.advice = "Example: CHC_Verfication('prog.tl', 1, 'specific', {':x': 10})"
             return_safety.error = ReturnError.ERROR
             return return_safety
+    
+    parsed_hints = set()
+    if hints is not None:
+        if not isinstance(hints, list) or not all(isinstance(h, str) for h in hints):
+            return_safety.expr = "Error: 'hints' must be a list of strings."
+            return_safety.advice = f"Valid hints: {[h.value for h in Hints]}"
+            return_safety.error = ReturnError.ERROR
+            return return_safety
+        try:
+            parsed_hints = {Hints(h) for h in hints}
+        except ValueError as e:
+            return_safety.expr = f"Error: Invalid hint value: {e}"
+            return_safety.advice = f"Valid hints: {[h.value for h in Hints]}"
+            return_safety.error = ReturnError.ERROR
+            return return_safety
 
     ir = astGenPass().visit(getParseTree(file_name))
     fp, Inv, BadHeading, state, next_state, symbol_table, counter_table = add_step_rules_to_fixed_point(ir, mode, param=params)
     print("Obtained fixed point object and invariant predicate. Ready to check properties.")
 
-    # query BadHeading to see if we can reach a state where the heading is not on the 15-degree grid
-    query_vars = z3util.get_vars(BadHeading(*state))
-    heading_grid_status = fp.query(Exists(query_vars, BadHeading(*state)))
-    if heading_grid_status == sat:
-        print("Heading can reach a value that is not a multiple of 15 degrees.")
-        print("Verification status is UNKNOWN under strict 15-degree exact semantics.")
-        return_safety.expr = "Skipping property checks."
-        return_safety.advice = "Heading can reach non-15-degree values. Verification status is UNKNOWN under strict 15-degree exact semantics."
-        return_safety.error = ReturnError.SUCCESS
-        return_safety.status = 'UNKNOWN'
-        return return_safety
-    elif heading_grid_status == unsat:
-        print("Heading is always a multiple of 15 degrees. Proceeding with exact verification.")
+    assumptions = None
+    if Hints.HEADING_MUL_15_ALWAYS in parsed_hints:
+        print("Hint: heading is always a multiple of 15 degrees. Skipping heading-grid check.")
+        assumptions = heading_on_grid(state[3])
     else:
-        print("Could not determine if heading stays on the 15-degree grid.")
-        print("Verification status is UNKNOWN.")
-        return_safety.expr = "Skipping property checks."
-        return_safety.advice = "Could not determine if heading stays on the 15-degree grid. Verification status is UNKNOWN."
-        return_safety.error = ReturnError.SUCCESS
-        return_safety.status = 'UNKNOWN'
-        return return_safety
+        query_vars = z3util.get_vars(BadHeading(*state))
+        heading_grid_status = fp.query(Exists(query_vars, BadHeading(*state)))
+        if heading_grid_status == sat:
+            print("Heading can reach a value that is not a multiple of 15 degrees.")
+            print("Verification status is UNKNOWN under strict 15-degree exact semantics.")
+            return_safety.expr = "Skipping property checks."
+            return_safety.advice = "Heading can reach non-15-degree values. Verification status is UNKNOWN under strict 15-degree exact semantics."
+            return_safety.error = ReturnError.SUCCESS
+            return_safety.status = 'UNKNOWN'
+            return return_safety
+        elif heading_grid_status == unsat:
+            print("Heading is always a multiple of 15 degrees. Proceeding with exact verification.")
+        else:
+            print("Could not determine if heading stays on the 15-degree grid.")
+            print("Verification status is UNKNOWN.")
+            return_safety.expr = "Skipping property checks."
+            return_safety.advice = "Could not determine if heading stays on the 15-degree grid. Verification status is UNKNOWN."
+            return_safety.error = ReturnError.SUCCESS
+            return_safety.status = 'UNKNOWN'
+            return return_safety
 
 
     eval_context = {
@@ -132,7 +157,7 @@ def CHC_Verification(file_name, mode, user_properties, params=None):
     print("\n========== Step 5 ==========")
     safe = True
     for property in properties:
-        check_property(fp, Inv, state, symbol_table, counter_table, property, mode)
+        check_property(fp, Inv, state, symbol_table, counter_table, property, mode, assumptions)
         if property.status == 'FAILED':
             print(f"Stopping further checks since property '{property.name}' failed.")
             print(f"Counterexample for property '{property.name}': {property.counterexample}")
