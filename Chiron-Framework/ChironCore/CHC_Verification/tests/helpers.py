@@ -29,7 +29,7 @@ class UserProperty:
 def program_path(name: str) -> str:
     return os.path.join(PROGRAMS_DIR, name)
 
-def _run_api_check(file_path, mode, name, expr_str, params=None, hints=["check_heading_always_on_grid"], timeout_ms=60_000):
+def _run_api_check(file_path, mode, name, expr_str, params=None, hints=["check_heading_always_on_grid"], timeout_ms=60_000, property_scope="all"):
     """Call CHC_Verification with a single property, stdout suppressed.
     params is a plain dict; converts to colon-keyed string for CHC_Verification."""
     params_str = None
@@ -41,6 +41,7 @@ def _run_api_check(file_path, mode, name, expr_str, params=None, hints=["check_h
             mode,
             [UserProperty(name, expr_str)],
             params_str,
+            property_scope=property_scope,
             hints=hints,
             timeout_ms=timeout_ms,
         )
@@ -49,21 +50,22 @@ class ChironTestCase(unittest.TestCase):
 
     MODE: str = None
 
-    def load(self, tl_file: str, params=None, hints=["check_heading_always_on_grid"], timeout_ms=60_000):
+    def load(self, tl_file: str, params=None, hints=["check_heading_always_on_grid"], timeout_ms=60_000, property_scope="all"):
         """Store file info for CHC_Verification runs."""
         self._tl_file = tl_file
         self._file_path = program_path(tl_file)
         self._params = params
         self._hints = hints
         self._timeout_ms = timeout_ms
+        self._property_scope = property_scope
     
     def return_from_api_check(self, name: str, expr: str):
         """Run CHC_Verification and return the full result object for inspection."""
-        return _run_api_check(self._file_path, self.MODE, name, expr, self._params, self._hints, self._timeout_ms)
+        return _run_api_check(self._file_path, self.MODE, name, expr, self._params, self._hints, self._timeout_ms, self._property_scope)
 
     def _assert_property_status(self, name: str, expr: str, expected: str, heading_grid_expected: str = None):
         """Run CHC_Verification and assert property status (and heading grid if provided)."""
-        result = _run_api_check(self._file_path, self.MODE, name, expr, self._params, self._hints, self._timeout_ms)
+        result = _run_api_check(self._file_path, self.MODE, name, expr, self._params, self._hints, self._timeout_ms, self._property_scope)
         if result.error == ReturnError.ERROR:
             self.fail(f"{result.expr} {result.advice}")
         self.assertEqual(
@@ -79,7 +81,7 @@ class ChironTestCase(unittest.TestCase):
 
     def _assert_heading_grid_status(self, name: str, expr: str, expected: str):
         """Run CHC_Verification and assert heading grid status."""
-        result = _run_api_check(self._file_path, self.MODE, name, expr, self._params, self._hints, self._timeout_ms)
+        result = _run_api_check(self._file_path, self.MODE, name, expr, self._params, self._hints, self._timeout_ms, self._property_scope)
         if result.error == ReturnError.ERROR:
             self.fail(f"{result.expr} {result.advice}")
         self.assertEqual(

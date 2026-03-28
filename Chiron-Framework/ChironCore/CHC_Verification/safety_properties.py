@@ -62,13 +62,19 @@ def check_property(fp, Inv, state, symbol_table, counter_table, property, mode, 
         print(f"Property '{property_name}' status is UNKNOWN. Solver returned: {result}")
         property.status = 'UNKNOWN'
 
-def CHC_Verification(file_name, mode, user_properties, params=None, hints=["check_heading_always_on_grid"], timeout_ms=60_000):
+def CHC_Verification(file_name, mode, user_properties, params=None, property_scope="all", hints=["check_heading_always_on_grid"], timeout_ms=60_000):
 
     return_safety = ReturnValue()
 
     if mode not in ['universal', 'specific', 'default']:
         return_safety.expr = "Invalid mode."
         return_safety.advice = "Please choose 'universal', 'specific', or 'default'."
+        return_safety.error = ReturnError.ERROR
+        return return_safety
+    
+    if property_scope not in ["all", "terminating"]:
+        return_safety.expr = "Invalid property scope option."
+        return_safety.advice = "Please choose 'all' or 'terminating'."
         return_safety.error = ReturnError.ERROR
         return return_safety
         
@@ -81,7 +87,6 @@ def CHC_Verification(file_name, mode, user_properties, params=None, hints=["chec
         try:
             raw_params = _ast.literal_eval(params)
             params = {k.lstrip(':'): float(v) for k, v in raw_params.items()}
-
             if params is None :
                 raise ValueError("Params dict cannot be None for specific mode.")
         except Exception as e:
@@ -107,6 +112,7 @@ def CHC_Verification(file_name, mode, user_properties, params=None, hints=["chec
 
     t_build_start = time.perf_counter()
     ir = astGenPass().visit(getParseTree(file_name))
+    terminal_pc = len(ir)
     fp, Inv, BadHeading, state, next_state, symbol_table, counter_table = add_step_rules_to_fixed_point(ir, mode, param=params)
     fp.set(timeout=timeout_ms)
     return_safety.build_time = time.perf_counter() - t_build_start
@@ -142,6 +148,25 @@ def CHC_Verification(file_name, mode, user_properties, params=None, hints=["chec
             return_safety.heading_grid_safe = 'UNKNOWN'
             return return_safety
 
+    if property_scope == "terminating":
+        fp.set(**{"spacer.native_mbp": False})
+        term_guard = (state[0] == IntVal(terminal_pc))
+        term_base = And(Inv(*state), term_guard) if assumptions is None else And(Inv(*state), assumptions, term_guard)
+        term_vars = z3util.get_vars(term_base)
+        term_res = fp.query(Exists(term_vars, term_base))
+        if term_res == unsat:
+            return_safety.expr = "No terminating reachable states."
+            return_safety.advice = "Program may not terminate; terminating-scope property is UNKNOWN."
+            return_safety.error = ReturnError.SUCCESS
+            return_safety.status = 'UNKNOWN'
+            return return_safety
+        if term_res != sat:
+            return_safety.expr = f"Termination reachability UNKNOWN: {term_res}"
+            return_safety.advice = "Terminating-scope property is UNKNOWN."
+            return_safety.error = ReturnError.SUCCESS
+            return_safety.status = 'UNKNOWN'
+            return return_safety
+        assumptions = term_guard if assumptions is None else And(assumptions, term_guard)
 
     eval_context = {
         'xcor': state[1], 'ycor': state[2], 'heading': state[3], 'pendown': state[4],
