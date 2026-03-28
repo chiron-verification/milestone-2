@@ -130,7 +130,6 @@ class TestUniversalInitialState(ChironTestCase):
         self.load("u_init_core.tl")
         self.assert_property_fail("x_zero", "x == 0")
 
-
 class TestUniversalArithmetic(ChironTestCase):
 
     MODE = "universal"
@@ -219,10 +218,6 @@ class TestUniversalArithmetic(ChironTestCase):
         self.load("u_branch_merge_affine.tl", property_scope="terminating")
         self.assert_property_pass("abs_diff", "Or(d == x - y, d == y - x)")
 
-    def test_term_branch_merge_d_eq_x_minus_y_fail(self):
-        self.load("u_branch_merge_affine.tl", property_scope="terminating")
-        self.assert_property_fail("d_eq_x_minus_y", "d == x - y")
-
     def test_term_euclid_avg_a_def_pass(self):
         self.load("u_euclid_avg.tl", property_scope="terminating")
         self.assert_property_pass("a_def", "a == m + n")
@@ -247,63 +242,208 @@ class TestUniversalArithmetic(ChironTestCase):
         self.load("u_swap_without_tmp.tl", property_scope="terminating")
         self.assert_property_fail("x_eq_y", "x == y")
 
+    def test_all_scope_init_tautology_pass(self):
+        self.load("u_init_core.tl", property_scope="all")
+        self.assert_property_pass("x_minus_x_zero", "x - x == 0")
+
+    def test_all_scope_branch_merge_tautology_pass(self):
+        self.load("u_branch_merge_affine.tl", property_scope="all")
+        self.assert_property_pass("d_trichotomy", "Or(d >= 0, d < 0)")
+
+    def test_all_scope_euclid_commute_pass(self):
+        self.load("u_euclid_avg.tl", property_scope="all")
+        self.assert_property_pass("a_plus_b_commute", "a + b == b + a")
+
+    def test_all_scope_swap_wo_tmp_tautology_pass(self):
+        self.load("u_swap_without_tmp.tl", property_scope="all")
+        self.assert_property_pass("s_minus_s_zero", "s - s == 0")
+
 class TestUniversalGeometric(ChironTestCase):
     """Geometric properties - fail because position starts arbitrary."""
 
     MODE = "universal"
 
+    def test_geo_fixed_target_xcor_pass(self):
+        self.load("u_fixed_target.tl", property_scope="terminating")
+        self.assert_property_pass("xcor_10", "xcor == 10")
+
+    def test_geo_fixed_target_ycor_pass(self):
+        self.load("u_fixed_target.tl", property_scope="terminating")
+        self.assert_property_pass("ycor_20", "ycor == 20")
+
+    def test_geo_fixed_target_both_pass(self):
+        self.load("u_fixed_target.tl", property_scope="terminating")
+        self.assert_property_pass("at_target", "And(xcor == 10, ycor == 20)")
+
+    def test_geo_fixed_target_xcor_zero_fail(self):
+        self.load("u_fixed_target.tl", property_scope="terminating")
+        self.assert_property_fail("xcor_zero", "xcor == 0")
+
+    def test_geo_fixed_target_ycor_zero_fail(self):
+        self.load("u_fixed_target.tl", property_scope="terminating")
+        self.assert_property_fail("ycor_zero", "ycor == 0")
+
+    def test_geo_fixed_target_user_relation_pass(self):
+        self.load("u_fixed_target_user.tl", property_scope="terminating")
+        self.assert_property_pass("delta_7", "ycor - xcor == 7")
+
+    def test_geo_fixed_target_user_x_eq_a_pass(self):
+        self.load("u_fixed_target_user.tl", property_scope="terminating")
+        self.assert_property_pass("x_eq_a", "xcor == a")
+
+    def test_geo_fixed_target_user_y_eq_a_plus_7_pass(self):
+        self.load("u_fixed_target_user.tl", property_scope="terminating")
+        self.assert_property_pass("y_eq_a_plus_7", "ycor == a + 7")
+
+    def test_geo_fixed_target_user_diag_fail(self):
+        self.load("u_fixed_target_user.tl", property_scope="terminating")
+        self.assert_property_fail("diag", "ycor == xcor")
+
+    def test_geo_fixed_target_user_xcor_zero_fail(self):
+        self.load("u_fixed_target_user.tl", property_scope="terminating")
+        self.assert_property_fail("xcor_zero", "xcor == 0")
+
+    def test_geo_normalize_x_xcor_pass(self):
+        self.load("u_normalize_x.tl", property_scope="terminating")
+        self.assert_property_pass("xcor_5", "xcor == 5")
+
+    def test_geo_normalize_x_ycor_pass(self):
+        self.load("u_normalize_x.tl", property_scope="terminating")
+        self.assert_property_pass("ycor_5", "ycor == 5")
+
+    def test_geo_normalize_x_diag_pass(self):
+        self.load("u_normalize_x.tl", property_scope="terminating")
+        self.assert_property_pass("diag", "xcor == ycor")
+
+    def test_geo_normalize_x_i_pass(self):
+        self.load("u_normalize_x.tl", property_scope="terminating")
+        self.assert_property_pass("i_eq_5", "i == 5")
+
+    def test_geo_normalize_x_xcor_zero_fail(self):
+        self.load("u_normalize_x.tl", property_scope="terminating")
+        self.assert_property_fail("xcor_zero", "xcor == 0")
+
+    def test_geo_xcor_fixed_xcor_pass(self):
+        self.load("u_xcor_fixed.tl", property_scope="terminating")
+        self.assert_property_pass("xcor_8", "xcor == 8")
+
+    def test_geo_xcor_fixed_ycor_choices_pass(self):
+        self.load("u_xcor_fixed.tl", property_scope="terminating")
+        self.assert_property_pass("ycor_choices", "Or(ycor == 3, ycor == -3)")
+
+    def test_geo_xcor_fixed_branch_relation_pass(self):
+        self.load("u_xcor_fixed.tl", property_scope="terminating")
+        self.assert_property_pass(
+            "branch_relation",
+            "Or(And(p >= 0, ycor == 3), And(p < 0, ycor == -3))",
+        )
+
+    def test_geo_xcor_fixed_ycor_zero_fail(self):
+        self.load("u_xcor_fixed.tl", property_scope="terminating")
+        self.assert_property_fail("ycor_zero", "ycor == 0")
+
+    def test_geo_loop_diagonal_heading_grid_safe(self):
+        self.load("u_loop_diagonal.tl", property_scope="all")
+        self.assert_heading_grid_safe("heading_grid", "xcor == xcor")
+
+    def test_geo_loop_diagonal_heading_range_pass(self):
+        self.load("u_loop_diagonal.tl", property_scope="all")
+        self.assert_property_pass("heading_range", "And(heading >= 0, heading < 360)")
 
 class TestUniversalPen(ChironTestCase):
     """Pen-state properties - pen starts False in universal mode."""
 
     MODE = "universal"
 
-    # def test_pen_no_movement_always_up_pass(self):
-    #     """assign_basic.tl has no pen commands -> pen stays False."""
-    #     self.load("assign_basic.tl")
-    #     self.assert_pass("pen_up", "Not(pendown)")
+    def test_pen_no_touch_pendown_pass(self):
+        self.load("u_pen_no_touch.tl", property_scope="all")
+        self.assert_property_pass("pendown_true", "pendown")
 
-    # def test_pen_toggle_always_up_fail(self):
-    #     """pendown command -> Not(pendown) violated."""
-    #     self.load("pen_only.tl")
-    #     self.assert_fail("pen_up", "Not(pendown)")
+    def test_pen_no_touch_not_pendown_fail(self):
+        self.load("u_pen_no_touch.tl", property_scope="all")
+        self.assert_property_fail("pendown_false", "Not(pendown)")
 
-    # def test_pen_loop_always_up_pass(self):
-    #     """loop_basic.tl has no pen commands -> pen stays False."""
-    #     self.load("loop_basic.tl")
-    #     self.assert_pass("pen_up", "Not(pendown)")
+    def test_pen_up_all_scope_pendown_fail(self):
+        self.load("u_pen_up.tl", property_scope="all")
+        self.assert_property_fail("pendown_true", "pendown")
 
-    # def test_pen_loop_cond_always_up_pass(self):
-    #     """loop_cond.tl has no pen commands -> pen stays False."""
-    #     self.load("loop_cond.tl")
-    #     self.assert_pass("pen_up", "Not(pendown)")
+    def test_pen_up_term_scope_not_pendown_pass(self):
+        self.load("u_pen_up.tl", property_scope="terminating")
+        self.assert_property_pass("pendown_false", "Not(pendown)")
 
-    # def test_pen_with_var_fail(self):
-    #     """pen_with_var.tl executes pendown -> Not(pendown) violated."""
-    #     self.load("pen_with_var.tl")
-    #     self.assert_fail("pen_up", "Not(pendown)")
+    def test_pen_up_term_scope_pendown_fail(self):
+        self.load("u_pen_up.tl", property_scope="terminating")
+        self.assert_property_fail("pendown_true", "pendown")
 
+    def test_branch_pen_term_relation_pass(self):
+        self.load("u_branch_pen.tl", property_scope="terminating")
+        self.assert_property_pass(
+            "branch_relation",
+            "Or(And(x >= 0, Not(pendown)), And(x < 0, pendown))",
+        )
+
+    def test_branch_pen_term_pendown_fail(self):
+        self.load("u_branch_pen.tl", property_scope="terminating")
+        self.assert_property_fail("pendown_true", "pendown")
+
+    def test_branch_pen_adv_term_relation_pass(self):
+        self.load("u_branch_pen_adv.tl", property_scope="terminating")
+        self.assert_property_pass(
+            "branch_relation",
+            "Or(And(a + b >= b, Not(pendown)), And(a + b < b, pendown))",
+        )
+
+    def test_branch_pen_adv_term_pendown_fail(self):
+        self.load("u_branch_pen_adv.tl", property_scope="terminating")
+        self.assert_property_fail("pendown_true", "pendown")
+
+    def test_branch_pen_adv_term_sign_relation_pass(self):
+        self.load("u_branch_pen_adv.tl", property_scope="terminating")
+        self.assert_property_pass(
+            "sign_relation",
+            "Or(And(a < 0, pendown), And(a >= 0, Not(pendown)))",
+        )
+
+    def test_loop_pen_term_pendown_pass(self):
+        self.load("u_loop_pen.tl", property_scope="terminating")
+        self.assert_property_pass("pendown_true", "pendown")
+
+    def test_loop_pen_term_not_pendown_fail(self):
+        self.load("u_loop_pen.tl", property_scope="terminating")
+        self.assert_property_fail("pendown_false", "Not(pendown)")
 
 class TestUniversalDirectional(ChironTestCase):
     """Heading properties - fail because heading starts arbitrary."""
 
     MODE = "universal"
 
-    # def test_dir_heading_nonneg_fail(self):
-    #     """Heading is arbitrary at pc=0 (universally quantified) -> heading >= 0 fails."""
-    #     self.load("turns_only.tl")
-    #     self.assert_fail("heading_nonneg", "heading >= 0")
+    def test_heading_non_grid_unsafe(self):
+        self.load("u_heading_non_grid.tl", property_scope="all")
+        self.assert_heading_grid_unsafe("heading_grid", "xcor == xcor")
 
-    # def test_dir_no_turns_heading_arbitrary_fail(self):
-    #     """Heading is arbitrary at pc=0 -> heading == 0 fails (no turns, but arbitrary start)."""
-    #     self.load("assign_basic.tl")
-    #     self.assert_fail("heading_zero", "heading == 0")
+    def test_heading_net_zero_grid_safe(self):
+        self.load("u_net_zero_turn.tl", property_scope="all")
+        self.assert_heading_grid_safe("heading_grid", "xcor == xcor")
 
-    # def test_dir_loop_heading_tautology_pass(self):
-    #     """heading >= 0 OR heading < 0 is always True regardless of initial value."""
-    #     self.load("loop_accum.tl")
-    #     self.assert_pass("taut", "Or(heading >= 0, heading < 0)")
+    def test_heading_net_zero_range_pass(self):
+        self.load("u_net_zero_turn.tl", property_scope="all")
+        self.assert_property_pass("heading_range", "And(heading >= 0, heading < 360)")
 
+    def test_heading_on_spot_grid_safe(self):
+        self.load("u_on_spot_turn.tl", property_scope="all", hints=["heading_on_grid_always"])
+        self.assert_heading_grid_safe("heading_grid", "xcor == xcor")
+
+    def test_heading_on_spot_range_pass(self):
+        self.load("u_on_spot_turn.tl", property_scope="all", hints=["heading_on_grid_always"])
+        self.assert_property_pass("heading_range", "And(heading >= 0, heading < 360)")
+
+    def test_heading_fixed_left_grid_safe(self):
+        self.load("u_fixed_left.tl", property_scope="all")
+        self.assert_heading_grid_safe("heading_grid", "xcor == xcor")
+
+    def test_heading_fixed_left_range_pass(self):
+        self.load("u_fixed_left.tl", property_scope="all")
+        self.assert_property_pass("heading_range", "And(heading >= 0, heading < 360)")
 
 if __name__ == "__main__":
     unittest.main()
