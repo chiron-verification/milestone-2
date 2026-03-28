@@ -8,6 +8,7 @@ from enum import Enum
 from heading_grid import heading_on_grid
 from z3 import z3util
 from enum import StrEnum, auto
+import time
 
 class ReturnError(Enum):
     SUCCESS = 0
@@ -20,9 +21,12 @@ class ReturnValue:
         self.advice = None   
         self.error = ReturnError.UNKNOWN
         self.status = 'UNKNOWN'
+        self.heading_grid_safe = 'UNKNOWN'
+        self.build_time = None
         self.passing_properties = []
         self.failing_properties = []
         self.unknown_properties = []
+        self.solve_times = []
 
 class Hints(StrEnum):
     CHECK_HEADING_ALWAYS_ON_GRID = auto()
@@ -58,7 +62,7 @@ def check_property(fp, Inv, state, symbol_table, counter_table, property, mode, 
         print(f"Property '{property_name}' status is UNKNOWN. Solver returned: {result}")
         property.status = 'UNKNOWN'
 
-def CHC_Verification(file_name, mode, user_properties, params=None, hints=["check_heading_always_on_grid"]):
+def CHC_Verification(file_name, mode, user_properties, params=None, hints=["check_heading_always_on_grid"], timeout_ms=60_000):
 
     return_safety = ReturnValue()
 
@@ -101,14 +105,18 @@ def CHC_Verification(file_name, mode, user_properties, params=None, hints=["chec
             return_safety.error = ReturnError.ERROR
             return return_safety
 
+    t_build_start = time.perf_counter()
     ir = astGenPass().visit(getParseTree(file_name))
     fp, Inv, BadHeading, state, next_state, symbol_table, counter_table = add_step_rules_to_fixed_point(ir, mode, param=params)
+    fp.set(timeout=timeout_ms)
+    return_safety.build_time = time.perf_counter() - t_build_start
     print("Obtained fixed point object and invariant predicate. Ready to check properties.")
 
     assumptions = None
     if Hints.HEADING_ON_GRID_ALWAYS in parsed_hints:
         print("Hint: heading is always on the grid. Skipping heading-grid check.")
         assumptions = heading_on_grid(state[3])
+        return_safety.heading_grid_safe = 'PASSED'
     elif Hints.CHECK_HEADING_ALWAYS_ON_GRID in parsed_hints:
         query_vars = z3util.get_vars(BadHeading(*state))
         heading_grid_status = fp.query(Exists(query_vars, BadHeading(*state)))
@@ -119,9 +127,11 @@ def CHC_Verification(file_name, mode, user_properties, params=None, hints=["chec
             return_safety.advice = "Heading can reach non-15-degree values. Verification status is UNKNOWN under strict 15-degree exact semantics."
             return_safety.error = ReturnError.SUCCESS
             return_safety.status = 'UNKNOWN'
+            return_safety.heading_grid_safe = 'FAILED'
             return return_safety
         elif heading_grid_status == unsat:
             print("Heading is always a multiple of 15 degrees. Proceeding with exact verification.")
+            return_safety.heading_grid_safe = 'PASSED'  
         else:
             print("Could not determine if heading stays on the 15-degree grid.")
             print("Verification status is UNKNOWN.")
@@ -129,6 +139,7 @@ def CHC_Verification(file_name, mode, user_properties, params=None, hints=["chec
             return_safety.advice = "Could not determine if heading stays on the 15-degree grid. Verification status is UNKNOWN."
             return_safety.error = ReturnError.SUCCESS
             return_safety.status = 'UNKNOWN'
+            return_safety.heading_grid_safe = 'UNKNOWN'
             return return_safety
 
 
@@ -157,7 +168,9 @@ def CHC_Verification(file_name, mode, user_properties, params=None, hints=["chec
     print("\n========== Step 5 ==========")
     safe = True
     for property in properties:
+        t_solve_start = time.perf_counter()
         check_property(fp, Inv, state, symbol_table, counter_table, property, mode, assumptions)
+        return_safety.solve_times.append(time.perf_counter() - t_solve_start)
         if property.status == 'FAILED':
             print(f"Stopping further checks since property '{property.name}' failed.")
             print(f"Counterexample for property '{property.name}': {property.counterexample}")
