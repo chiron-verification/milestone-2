@@ -1,2 +1,2 @@
 :diff = :hi - :lo
-:avg = :hi + :lo
+:sum = :hi + :lo
