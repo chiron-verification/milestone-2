@@ -20,19 +20,16 @@ for _p in (_CHIRON_CORE, _CHC_DIR):
 from irhandler import getParseTree
 from ChironAST.builder import astGenPass
 from step_rules import add_step_rules_to_fixed_point
-from safety_properties import (
-    CHC_Verification,
-    check_heading_on_grid,
-    HEADING_GRID_SAFE,
-    HEADING_GRID_VIOLATED,
-    HEADING_GRID_UNKNOWN,
-)
+from safety_properties import CHC_Verification
 from z3 import *
 
 PROGRAMS_DIR = os.path.join(_THIS_DIR, "programs")
 TIMEOUT_MS   = 15_000
 TIMING       = "-t" in sys.argv
 
+HEADING_GRID_SAFE = "SAFE"
+HEADING_GRID_VIOLATED = "VIOLATED"
+HEADING_GRID_UNKNOWN = "UNKNOWN"
 
 class UserProperty:
     """Property with a string expression for passing to CHC_Verification."""
@@ -46,17 +43,23 @@ def program_path(name: str) -> str:
 
 
 def build_fp(name: str, mode: str, params=None):
-    """Parse *name*.tl and return (fp, Inv, state, next_state, sym, ctr)."""
+    """Parse *name*.tl and return (fp, Inv, BadHeading, state, next_state, sym, ctr)."""
     ir = astGenPass().visit(getParseTree(program_path(name)))
-    fp, Inv, state, ns, st, ct = add_step_rules_to_fixed_point(ir, mode, param=params)
+    fp, Inv, BadHeading, state, ns, st, ct = add_step_rules_to_fixed_point(ir, mode, param=params)
     fp.set(timeout=TIMEOUT_MS)
-    return fp, Inv, state, ns, st, ct
+    return fp, Inv, BadHeading, state, ns, st, ct
 
 
-def _run_heading_check(fp, Inv, state):
-    """Run check_heading_on_grid with stdout suppressed."""
+def _run_heading_check(fp, BadHeading, state):
+    """Check if heading can leave the 15-degree grid; suppress stdout."""
     with redirect_stdout(StringIO()):
-        return check_heading_on_grid(fp, Inv, state)
+        query_vars = z3util.get_vars(BadHeading(*state))
+        result = fp.query(Exists(query_vars, BadHeading(*state)))
+        if result == sat:
+            return HEADING_GRID_VIOLATED
+        if result == unsat:
+            return HEADING_GRID_SAFE
+        return HEADING_GRID_UNKNOWN
 
 
 def _run_api_check(file_path, mode, name, expr_str, params=None):
@@ -80,7 +83,7 @@ class ChironTestCase(unittest.TestCase):
         self._params = params
         t0 = time.perf_counter()
         with redirect_stdout(StringIO()):
-            self._fp, self._Inv, self._state, self._ns, self._st, self._ct = \
+            self._fp, self._Inv, self._BadHeading, self._state, self._ns, self._st, self._ct = \
                 build_fp(tl_file, self.MODE, params)
         self._build_time = time.perf_counter() - t0
 
@@ -128,7 +131,7 @@ class ChironTestCase(unittest.TestCase):
 
     def assert_heading_grid_safe(self):
         """Assert heading always stays on 15-degree grid."""
-        status = _run_heading_check(self._fp, self._Inv, self._state)
+        status = _run_heading_check(self._fp, self._BadHeading, self._state)
         self.assertEqual(
             status,
             HEADING_GRID_SAFE,
@@ -138,7 +141,7 @@ class ChironTestCase(unittest.TestCase):
 
     def assert_heading_grid_violated(self):
         """Assert heading can leave 15-degree grid."""
-        status = _run_heading_check(self._fp, self._Inv, self._state)
+        status = _run_heading_check(self._fp, self._BadHeading, self._state)
         self.assertEqual(
             status,
             HEADING_GRID_VIOLATED,
@@ -148,7 +151,7 @@ class ChironTestCase(unittest.TestCase):
 
     def assert_heading_grid_unknown(self):
         """Assert heading-grid status is not safe (treated as UNKNOWN for verification)."""
-        status = _run_heading_check(self._fp, self._Inv, self._state)
+        status = _run_heading_check(self._fp, self._BadHeading, self._state)
         if status == HEADING_GRID_SAFE:
             self.fail("Expected heading-grid status to be UNKNOWN, but it was SAFE")
         return status
