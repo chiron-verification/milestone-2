@@ -20,6 +20,16 @@ class TestDefaultArithmetic(ChironTestCase):
         """z reaches 30, so z <= 20 is violated."""
         self.load("assign_basic.tl")
         self.assert_fail("z_upper", "z <= 20")
+    
+    def test_arith_x_pos_pass(self):
+        """x starts at 0 and is assinged to 10"""
+        self.load("assign_basic.tl")
+        self.assert_pass("x_bounded", "And(x >= 0, x <= 10)")
+    
+    def test_arith_x_greater_10_fail(self):
+        """x starts at 0 and is assinged to 10"""
+        self.load("assign_basic.tl")
+        self.assert_fail("x_greater_10", "x > 10")
 
     def test_arith_loop_accum_nonneg_pass(self):
         """x starts 0 and only increases -> x >= 0."""
@@ -55,6 +65,16 @@ class TestDefaultArithmetic(ChironTestCase):
         """z=30 in assign_basic.tl (default mode) -> z >= 100 violated."""
         self.load("assign_basic.tl")
         self.assert_fail("z_tight", "z >= 100")
+
+    def test_arith_adv_x_bound_pass(self):
+        """x starts at 0 grows as x=0->5->15->30->50->75 in loop_adv.tl -> x <= 75 holds."""
+        self.load("loop_adv.tl")
+        self.assert_pass("x_bound", "x <= 75")
+
+    def test_arith_adv_x_bound_fail(self):
+        """x starts at 0 grows as x=0->5->15->30->50->75 in loop_adv.tl -> x <= 70 fails."""
+        self.load("loop_adv.tl")
+        self.assert_fail("x_bound", "x <= 70")
 
 class TestDefaultGeometric(ChironTestCase):
     """Geometric (bounded box / safety region) properties using goto programs."""
@@ -165,28 +185,13 @@ class TestDefaultHeadingGrid(ChironTestCase):
 
     def test_heading_grid_turns_15_pass(self):
         """turns_15.tl keeps heading on 15-degree grid."""
-        self.load("turns_15.tl")
+        self.load("turns_15.tl", hints=["heading_on_grid_always"])
         grid_expr = "Or(" + ", ".join(f"heading == {deg}" for deg in range(-360, 721, 15)) + ")"
         self.assert_pass("heading_on_grid", grid_expr)
 
-    def test_heading_grid_turns_non_15_violated(self):
-        """turns_non_15.tl can reach heading not on grid — heading grid pre-check is VIOLATED."""
-        self.load("turns_non_15.tl")
-        self.assert_heading_grid_violated()
-
-    def test_heading_grid_turns_15_safe(self):
-        """turns_15.tl keeps heading on the 15-degree grid (pre-check)."""
-        self.load("turns_15.tl")
-        self.assert_heading_grid_safe()
-
-    def test_heading_grid_turns_non_15_unknown(self):
-        """turns_non_15.tl can leave grid -> verification treated as UNKNOWN."""
-        self.load("turns_non_15.tl")
-        self.assert_heading_grid_unknown()
-
     def test_heading_grid_turns_15_heading_range_pass(self):
         """Concrete property checked only after grid restriction passes."""
-        self.load("turns_15.tl")
+        self.load("turns_15.tl", hints=["heading_on_grid_always"])
         self.assert_pass_after_heading_grid(
             "heading_in_range",
             "And(heading >= 0, heading < 360)",
@@ -194,7 +199,7 @@ class TestDefaultHeadingGrid(ChironTestCase):
 
     def test_heading_grid_turns_non_15_heading_range_skipped(self):
         """Concrete property is UNKNOWN when grid restriction is not safe."""
-        self.load("turns_non_15.tl")
+        self.load("turns_non_15.tl", hints=["check_heading_always_on_grid"])
         self.assert_unknown_after_heading_grid(
             "heading_in_range",
             "And(heading >= 0, heading < 360)",
@@ -208,7 +213,7 @@ class TestDefaultTrig(ChironTestCase):
 
     MODE = "default"
 
-    @unittest.skip("SPACER cannot prove trig-based position invariants with the exact If-chain encoding.")
+    @unittest.skip("Exceeds the time limit of 15 seconds")
     def test_trig_forward_square_box_pass(self):
         """forward_square.tl draws ~square at heading multiples of 90.
         Generous box [-100,100]x[-100,100] should hold."""

@@ -27,10 +27,6 @@ PROGRAMS_DIR = os.path.join(_THIS_DIR, "programs")
 TIMEOUT_MS   = 15_000
 TIMING       = "-t" in sys.argv
 
-HEADING_GRID_SAFE = "SAFE"
-HEADING_GRID_VIOLATED = "VIOLATED"
-HEADING_GRID_UNKNOWN = "UNKNOWN"
-
 class UserProperty:
     """Property with a string expression for passing to CHC_Verification."""
     def __init__(self, name: str, expr: str):
@@ -48,19 +44,6 @@ def build_fp(name: str, mode: str, params=None):
     fp, Inv, BadHeading, state, ns, st, ct = add_step_rules_to_fixed_point(ir, mode, param=params)
     fp.set(timeout=TIMEOUT_MS)
     return fp, Inv, BadHeading, state, ns, st, ct
-
-
-def _run_heading_check(fp, BadHeading, state):
-    """Check if heading can leave the 15-degree grid; suppress stdout."""
-    with redirect_stdout(StringIO()):
-        query_vars = z3util.get_vars(BadHeading(*state))
-        result = fp.query(Exists(query_vars, BadHeading(*state)))
-        if result == sat:
-            return HEADING_GRID_VIOLATED
-        if result == unsat:
-            return HEADING_GRID_SAFE
-        return HEADING_GRID_UNKNOWN
-
 
 def _run_api_check(file_path, mode, name, expr_str, params=None, hints=None):
     """Call CHC_Verification with a single property, stdout suppressed.
@@ -129,33 +112,6 @@ class ChironTestCase(unittest.TestCase):
             f"Property '{name}': expected FAILED, got {result.status}",
         )
         return result
-
-    def assert_heading_grid_safe(self):
-        """Assert heading always stays on 15-degree grid."""
-        status = _run_heading_check(self._fp, self._BadHeading, self._state)
-        self.assertEqual(
-            status,
-            HEADING_GRID_SAFE,
-            f"Expected heading to stay on 15-degree grid, got {status}",
-        )
-        return status
-
-    def assert_heading_grid_violated(self):
-        """Assert heading can leave 15-degree grid."""
-        status = _run_heading_check(self._fp, self._BadHeading, self._state)
-        self.assertEqual(
-            status,
-            HEADING_GRID_VIOLATED,
-            f"Expected heading to leave 15-degree grid, got {status}",
-        )
-        return status
-
-    def assert_heading_grid_unknown(self):
-        """Assert heading-grid status is not safe (treated as UNKNOWN for verification)."""
-        status = _run_heading_check(self._fp, self._BadHeading, self._state)
-        if status == HEADING_GRID_SAFE:
-            self.fail("Expected heading-grid status to be UNKNOWN, but it was SAFE")
-        return status
 
     def assert_pass_after_heading_grid(self, name: str, expr: str):
         """Run via CHC_Verification; skip property if heading grid is not safe."""
