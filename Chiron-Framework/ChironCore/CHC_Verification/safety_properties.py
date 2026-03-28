@@ -26,7 +26,7 @@ class ReturnValue:
 
 class Hints(StrEnum):
     CHECK_HEADING_ALWAYS_ON_GRID = auto()
-    HEADING_MUL_15_ALWAYS = auto()
+    HEADING_ON_GRID_ALWAYS = auto()
 
 class Property:
     def __init__(self, name, property_expr):
@@ -58,7 +58,7 @@ def check_property(fp, Inv, state, symbol_table, counter_table, property, mode, 
         print(f"Property '{property_name}' status is UNKNOWN. Solver returned: {result}")
         property.status = 'UNKNOWN'
 
-def CHC_Verification(file_name, mode, user_properties, params=None, hints=None):
+def CHC_Verification(file_name, mode, user_properties, params=None, hints=["check_heading_always_on_grid"]):
 
     return_safety = ReturnValue()
 
@@ -106,10 +106,10 @@ def CHC_Verification(file_name, mode, user_properties, params=None, hints=None):
     print("Obtained fixed point object and invariant predicate. Ready to check properties.")
 
     assumptions = None
-    if Hints.HEADING_MUL_15_ALWAYS in parsed_hints:
-        print("Hint: heading is always a multiple of 15 degrees. Skipping heading-grid check.")
+    if Hints.HEADING_ON_GRID_ALWAYS in parsed_hints:
+        print("Hint: heading is always on the grid. Skipping heading-grid check.")
         assumptions = heading_on_grid(state[3])
-    else:
+    elif Hints.CHECK_HEADING_ALWAYS_ON_GRID in parsed_hints:
         query_vars = z3util.get_vars(BadHeading(*state))
         heading_grid_status = fp.query(Exists(query_vars, BadHeading(*state)))
         if heading_grid_status == sat:
