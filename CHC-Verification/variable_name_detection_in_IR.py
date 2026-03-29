@@ -2,8 +2,8 @@
 import sys
 import os
 from z3 import *
-directory_to_add = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-sys.path.append(directory_to_add)
+_CHIRON_CORE = os.path.abspath(os.path.join(os.path.dirname(__file__), "../Chiron-Framework/ChironCore"))
+sys.path.append(_CHIRON_CORE)
 from ChironAST import ChironAST
 
 def pretty_print_symbol_table(symbol_table):
