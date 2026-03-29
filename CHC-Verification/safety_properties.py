@@ -194,7 +194,19 @@ def CHC_Verification(file_name, mode, user_properties, params=None, property_sco
     safe = True
     for property in properties:
         t_solve_start = time.perf_counter()
-        check_property(fp, Inv, state, symbol_table, counter_table, property, mode, assumptions)
+        try:
+            check_property(fp, Inv, state, symbol_table, counter_table, property, mode, assumptions)
+        except Exception as e:
+            if 'canceled' in str(e):
+                return_safety.solve_times.append(time.perf_counter() - t_solve_start)
+                property.status = 'UNKNOWN'
+                return_safety.unknown_properties.append(property.name)
+                return_safety.expr = f"Solver timed out on property '{property.name}'."
+                return_safety.advice = "Increase timeout_ms."
+                return_safety.error = ReturnError.SUCCESS
+                return_safety.status = 'UNKNOWN'
+                return return_safety
+            raise
         return_safety.solve_times.append(time.perf_counter() - t_solve_start)
         if property.status == 'FAILED':
             print(f"Stopping further checks since property '{property.name}' failed.")

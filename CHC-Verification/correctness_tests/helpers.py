@@ -10,7 +10,7 @@ from io import StringIO
 
 _THIS_DIR    = os.path.dirname(os.path.abspath(__file__))
 _CHC_DIR     = os.path.abspath(os.path.join(_THIS_DIR, ".."))
-_CHIRON_CORE = os.path.abspath(os.path.join(_CHC_DIR, "../Chiron-Framework/ChironCore"))
+_CHIRON_CORE = os.path.abspath(os.path.join(_CHC_DIR, ".."))
 
 for _p in (_CHIRON_CORE, _CHC_DIR):
     if _p not in sys.path:
