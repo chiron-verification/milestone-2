@@ -27,7 +27,6 @@ def linearized_trig_move(x, y, h, delta, forward=True):
         y_expr = If(h == RealVal(deg), y + dy, y_expr)
     return x_expr, y_expr, BoolVal(True)
 
-
 def _is_int_literal(val):
     return isinstance(val, int) or (isinstance(val, float) and val.is_integer())
 
@@ -157,4 +156,66 @@ def is_all_turn_safe(turn_safe_map, ir):
             if direction in ["left", "right"]:
                 if turn_safe_map[i] is not True:
                     return False
+    return True
+
+def check_counter_decrement(ir, idx, counter_name):
+    if (idx < 0) or (idx >= len(ir)):
+        return False
+    instr, _ = ir[idx]
+    if isinstance(instr, ChironAST.AssignmentCommand):
+        lvar = instr.lvar
+        rexpr = instr.rexpr
+        if isinstance(lvar, ChironAST.Var) and lvar.varname == counter_name:
+            if isinstance(rexpr, ChironAST.Diff):
+                inner_lexpr = rexpr.lexpr
+                inner_rexpr = rexpr.rexpr
+                if isinstance(inner_lexpr, ChironAST.Var) and inner_lexpr.varname == counter_name:
+                    if isinstance(inner_rexpr, ChironAST.Num) and inner_rexpr.val == 1:
+                        return True
+    return False
+
+def check_jump_back_condition(ir, idx, body_len):
+    if (idx < 0) or (idx >= len(ir)):
+        return False
+    (instr, jump_target) = ir[idx]
+    if isinstance(instr, ChironAST.ConditionCommand):
+        cond = instr.cond
+        if isinstance(cond, ChironAST.BoolFalse) and (jump_target == -(body_len + 2)):
+            return True
+    return False
+
+def find_repeat_loops(ir):
+    repeat_loops_list = []
+    for i, (instr, jump_target) in enumerate(ir):
+        if isinstance(instr, ChironAST.AssignmentCommand) and isinstance(instr.lvar, ChironAST.Var):
+            lvar = instr.lvar.varname
+            rexpr = instr.rexpr
+            if (lvar.startswith(":__rep_counter_")) and (isinstance(rexpr, ChironAST.Num)) and (i+1 < len(ir)):
+                (next_instr, next_jump_target) = ir[i + 1]
+                if isinstance(next_instr, ChironAST.ConditionCommand):
+                    cond = next_instr.cond
+                    if isinstance(cond, ChironAST.GT):
+                        inner_lexpr = cond.lexpr
+                        inner_rexpr = cond.rexpr
+                        if (isinstance(inner_lexpr, ChironAST.Var) and inner_lexpr.varname == lvar) and (isinstance(inner_rexpr, ChironAST.Num) and inner_rexpr.val == 0):
+                            jump = next_jump_target
+                            body_len = jump - 3
+                            dec_idx = i + 2 + body_len
+                            back_idx = i + 3 + body_len
+                            if check_counter_decrement(ir, dec_idx, lvar) and check_jump_back_condition(ir, back_idx, body_len) and (body_len >= 0):
+                                repeat_loops_list.append((i, i+1, i+2, dec_idx-1, dec_idx, back_idx, back_idx+1, lvar, rexpr.val))
+    return repeat_loops_list
+    
+def is_summarizable_loop(ir, loop_desc):
+    (init_idx, cond_idx, body_start, body_end, dec_idx, back_idx, exit_idx, counter_name, loop_count) = loop_desc
+    if not isinstance(loop_count, int) or loop_count <= 0:
+        return False
+    for idx in range(body_start, body_end + 1):
+        instr, jump = ir[idx]
+        if isinstance(instr, ChironAST.ConditionCommand) or isinstance(instr, ChironAST.AssertCommand):
+            return False
+        if jump != 1:
+            return False
+        if counter_name in str(instr):
+            return False
     return True
