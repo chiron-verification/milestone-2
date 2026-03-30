@@ -416,7 +416,6 @@ class TestUniversalDirectional(ChironTestCase):
     """Heading properties - fail because heading starts arbitrary."""
 
     MODE = "universal"
-
     def test_heading_non_grid_unsafe(self):
         self.load("u_heading_non_grid.tl", property_scope="all")
         self.assert_heading_grid_unsafe("heading_grid", "xcor == xcor")
@@ -443,6 +442,42 @@ class TestUniversalDirectional(ChironTestCase):
 
     def test_heading_fixed_left_range_pass(self):
         self.load("u_fixed_left.tl", property_scope="all")
+        self.assert_property_pass("heading_range", "And(heading >= 0, heading < 360)")
+
+    def test_heading_branch_mul15_basic_opt_pass(self):
+        """Branch assigns turn by 30 or 45 (both multiples of 15)."""
+        self.load(
+            "u_branch_always_mul_15.tl",
+            property_scope="terminating",
+            optimization_level=OptimizationLevel.BASIC,
+        )
+        self.assert_property_pass("t_is_30_or_45", "Or(t == 30, t == 45)")
+
+    def test_heading_branch_mul15_adv_basic_opt_pass(self):
+        """Branch assigns turn by 30 or 45-15 (both multiples of 15)."""
+        self.load(
+            "u_branch_always_mul_15_adv.tl",
+            property_scope="terminating",
+            optimization_level=OptimizationLevel.BASIC,
+        )
+        self.assert_property_pass("t_is_30", "t == 30")
+
+    def test_heading_mul15_repeat_basic_opt_pass(self):
+        """:t = 15 * :m; left :t; heading stays on 15-degree grid."""
+        self.load(
+            "u_mul_15_heading_on_grid.tl",
+            property_scope="terminating",
+            optimization_level=OptimizationLevel.BASIC,
+        )
+        self.assert_property_pass("t_is_15m", "t == 15 * m")
+
+    def test_heading_net_preserved_basic_opt_pass(self):
+        """:a = 15 * :k; left :a; right :a; heading stays on grid."""
+        self.load(
+            "u_net_heading_preserved.tl",
+            property_scope="all",
+            optimization_level=OptimizationLevel.BASIC,
+        )
         self.assert_property_pass("heading_range", "And(heading >= 0, heading < 360)")
 
 if __name__ == "__main__":
