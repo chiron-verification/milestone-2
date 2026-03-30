@@ -5,12 +5,8 @@ from ChironAST import ChironAST
 from math import cos, sin, pi
 from fractions import Fraction
 from z3 import z3util
-
-_MULT15_VALUES = {
-    deg: (Fraction(cos(deg * pi / 180)).limit_denominator(10**9),
-          Fraction(sin(deg * pi / 180)).limit_denominator(10**9))
-    for deg in range(0, 360, 15)
-}
+from optimization_helpers import *
+from optimization_helpers import _MULT15_VALUES
 
 def cos_sin_exact_z3(h, i):
     cos_expr = RealVal(0)
@@ -110,7 +106,7 @@ def chiron_expr_to_z3(expr, fp, Inv, state, next_state, symbol_table, counter_ta
         print(f"Error: Unrecognized expression type: {type(expr)}")
         sys.exit(1)
 
-def chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, BadHeading, state, next_state, symbol_table, counter_table):
+def chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, BadHeading, state, next_state, symbol_table, counter_table, optimization_level, turn_safe_map):
 
     current_state = (IntVal(i), *state[1:])
 
@@ -213,7 +209,10 @@ def chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, BadHeading, state,
 
         bad_rule = None
         if direction in ["left", "right"] :
-            bad_rule = Implies(And(Inv(*current_state), trig_constraints, Not(heading_on_grid(next_state_heading))), BadHeading(*next_state_tuple))
+            if (optimization_level == OptimizationLevel.BASIC) and turn_safe_map and (turn_safe_map[i] is True):
+                pass
+            else:
+                bad_rule = Implies(And(Inv(*current_state), trig_constraints, Not(heading_on_grid(next_state_heading))), BadHeading(*next_state_tuple))
         return rule, None, bad_rule
 
     elif isinstance(instr, ChironAST.PenCommand):
@@ -282,15 +281,17 @@ def chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, BadHeading, state,
         
 
 
-def add_step_rules_to_fixed_point(ir, mode, param=None):
-    fp, BadHeading, Inv, state, next_state, symbol_table, counter_table = z3_fixed_point_object_with_start_state_set(ir, mode, params=param)
+def add_step_rules_to_fixed_point(ir, mode, param=None, optimization_level=OptimizationLevel.NONE):
+    fp, BadHeading, Inv, state, next_state, symbol_table, counter_table = z3_fixed_point_object_with_start_state_set(ir, mode, params=param, optimization_level=optimization_level)
 
     print("\n========== Step 4 ==========")
+
+    turn_safe_map = turn_safe(ir) if optimization_level != OptimizationLevel.NONE else None
 
     for i, stmt in enumerate(ir):
         instr = stmt[0]
         jump_target = stmt[1]
-        rule_true, rule_false, bad_rule = chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, BadHeading, state, next_state, symbol_table, counter_table)
+        rule_true, rule_false, bad_rule = chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, BadHeading, state, next_state, symbol_table, counter_table, optimization_level, turn_safe_map)
         rule_true_vars = z3util.get_vars(rule_true)
         fp.rule(ForAll(rule_true_vars, rule_true))
         print(f"Added rule for instruction at line {i}: {rule_true}")
@@ -305,4 +306,4 @@ def add_step_rules_to_fixed_point(ir, mode, param=None):
         
     print("Step rules added to fixedpoint object.")
 
-    return fp, Inv, BadHeading, state, next_state, symbol_table, counter_table
+    return fp, Inv, BadHeading, state, next_state, symbol_table, counter_table, turn_safe_map

@@ -2,8 +2,8 @@ from variable_name_detection_in_IR import *
 import sys
 from z3 import *
 
-def z3_fixed_point_invariant_generation(ir, mode):
-    symbol_table, counter_table = parse_variables_from_ir(ir)
+def z3_fixed_point_invariant_generation(ir, mode, optimization_level=OptimizationLevel.NONE):
+    symbol_table, counter_table = parse_variables_from_ir(ir, optimization_level=optimization_level)
     print("Obtained user variables and loop counters from the IR.")
 
     print("\n========== Step 2 ==========")

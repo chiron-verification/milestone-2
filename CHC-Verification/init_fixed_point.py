@@ -3,8 +3,8 @@ import sys
 from z3 import *
 from heading_grid import heading_on_grid
 
-def z3_fixed_point_object_with_start_state_set(ir, mode, params=None):
-    Inv, BadHeading, state, next_state, symbol_table, counter_table = z3_fixed_point_invariant_generation(ir, mode)
+def z3_fixed_point_object_with_start_state_set(ir, mode, params=None, optimization_level=OptimizationLevel.NONE):
+    Inv, BadHeading, state, next_state, symbol_table, counter_table = z3_fixed_point_invariant_generation(ir, mode, optimization_level=optimization_level)
     print("Obtained the invariant relation, state variables, and symbol/counter tables from the IR.")
 
     print("\n========== Step 3 ==========")

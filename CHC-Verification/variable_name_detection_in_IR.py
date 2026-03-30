@@ -1,10 +1,19 @@
-# input the ir file
 import sys
 import os
 from z3 import *
 directory_to_add = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(directory_to_add)
+base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(base_dir)
+sys.path.insert(0, os.path.join(base_dir, "Chiron-Framework", "ChironCore"))
+
 from ChironAST import ChironAST
+from enum import Enum, auto
+
+class OptimizationLevel(Enum):
+    NONE = 0
+    BASIC = 1
+    AGGRESSIVE = 2
 
 def pretty_print_symbol_table(symbol_table):
     print("---------- Symbol Table (User Variables) ---------")
@@ -51,7 +60,7 @@ def parse_variables_from_ir_cond(cond, symbol_table, symbol_table_entry, counter
     elif isinstance(cond, ChironAST.PenStatus) or isinstance(cond, ChironAST.BoolTrue) or isinstance(cond, ChironAST.BoolFalse):
         pass
 
-def parse_variables_from_ir(ir):
+def parse_variables_from_ir(ir, optimization_level=OptimizationLevel.NONE):
     print("\n========== Step 1 ==========")
     symbol_table = {}
     symbol_table_entry = {

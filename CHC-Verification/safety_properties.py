@@ -62,7 +62,7 @@ def check_property(fp, Inv, state, symbol_table, counter_table, property, mode, 
         print(f"Property '{property_name}' status is UNKNOWN. Solver returned: {result}")
         property.status = 'UNKNOWN'
 
-def CHC_Verification(file_name, mode, user_properties, params=None, property_scope="all", hints=["check_heading_always_on_grid"], timeout_ms=60_000):
+def CHC_Verification(file_name, mode, user_properties, params=None, property_scope="all", hints=["check_heading_always_on_grid"], timeout_ms=60_000, optimization_level=OptimizationLevel.NONE):
 
     return_safety = ReturnValue()
 
@@ -75,6 +75,12 @@ def CHC_Verification(file_name, mode, user_properties, params=None, property_sco
     if property_scope not in ["all", "terminating"]:
         return_safety.expr = "Invalid property scope option."
         return_safety.advice = "Please choose 'all' or 'terminating'."
+        return_safety.error = ReturnError.ERROR
+        return return_safety
+
+    if optimization_level not in OptimizationLevel:
+        return_safety.expr = "Invalid optimization level."
+        return_safety.advice = "Please choose an optimization level from the OptimizationLevel enum."
         return_safety.error = ReturnError.ERROR
         return return_safety
         
@@ -113,7 +119,7 @@ def CHC_Verification(file_name, mode, user_properties, params=None, property_sco
     t_build_start = time.perf_counter()
     ir = astGenPass().visit(getParseTree(file_name))
     terminal_pc = len(ir)
-    fp, Inv, BadHeading, state, next_state, symbol_table, counter_table = add_step_rules_to_fixed_point(ir, mode, param=params)
+    fp, Inv, BadHeading, state, next_state, symbol_table, counter_table, turn_safe_map = add_step_rules_to_fixed_point(ir, mode, param=params, optimization_level=optimization_level)
     fp.set(timeout=timeout_ms)
     return_safety.build_time = time.perf_counter() - t_build_start
     print("Obtained fixed point object and invariant predicate. Ready to check properties.")
@@ -124,29 +130,32 @@ def CHC_Verification(file_name, mode, user_properties, params=None, property_sco
         assumptions = heading_on_grid(state[3])
         return_safety.heading_grid_safe = 'PASSED'
     elif Hints.CHECK_HEADING_ALWAYS_ON_GRID in parsed_hints:
-        query_vars = z3util.get_vars(BadHeading(*state))
-        heading_grid_status = fp.query(Exists(query_vars, BadHeading(*state)))
-        if heading_grid_status == sat:
-            print("Heading can reach a value that is not a multiple of 15 degrees.")
-            print("Verification status is UNKNOWN under strict 15-degree exact semantics.")
-            return_safety.expr = "Skipping property checks."
-            return_safety.advice = "Heading can reach non-15-degree values. Verification status is UNKNOWN under strict 15-degree exact semantics."
-            return_safety.error = ReturnError.SUCCESS
-            return_safety.status = 'UNKNOWN'
-            return_safety.heading_grid_safe = 'FAILED'
-            return return_safety
-        elif heading_grid_status == unsat:
-            print("Heading is always a multiple of 15 degrees. Proceeding with exact verification.")
-            return_safety.heading_grid_safe = 'PASSED'  
+        if (optimization_level == OptimizationLevel.BASIC) and (turn_safe_map is not None) and is_all_turn_safe(turn_safe_map, ir):
+            return_safety.heading_grid_safe = 'PASSED'
         else:
-            print("Could not determine if heading stays on the 15-degree grid.")
-            print("Verification status is UNKNOWN.")
-            return_safety.expr = "Skipping property checks."
-            return_safety.advice = "Could not determine if heading stays on the 15-degree grid. Verification status is UNKNOWN."
-            return_safety.error = ReturnError.SUCCESS
-            return_safety.status = 'UNKNOWN'
-            return_safety.heading_grid_safe = 'UNKNOWN'
-            return return_safety
+            query_vars = z3util.get_vars(BadHeading(*state))
+            heading_grid_status = fp.query(Exists(query_vars, BadHeading(*state)))
+            if heading_grid_status == sat:
+                print("Heading can reach a value that is not a multiple of 15 degrees.")
+                print("Verification status is UNKNOWN under strict 15-degree exact semantics.")
+                return_safety.expr = "Skipping property checks."
+                return_safety.advice = "Heading can reach non-15-degree values. Verification status is UNKNOWN under strict 15-degree exact semantics."
+                return_safety.error = ReturnError.SUCCESS
+                return_safety.status = 'UNKNOWN'
+                return_safety.heading_grid_safe = 'FAILED'
+                return return_safety
+            elif heading_grid_status == unsat:
+                print("Heading is always a multiple of 15 degrees. Proceeding with exact verification.")
+                return_safety.heading_grid_safe = 'PASSED'  
+            else:
+                print("Could not determine if heading stays on the 15-degree grid.")
+                print("Verification status is UNKNOWN.")
+                return_safety.expr = "Skipping property checks."
+                return_safety.advice = "Could not determine if heading stays on the 15-degree grid. Verification status is UNKNOWN."
+                return_safety.error = ReturnError.SUCCESS
+                return_safety.status = 'UNKNOWN'
+                return_safety.heading_grid_safe = 'UNKNOWN'
+                return return_safety
 
     if property_scope == "terminating":
         fp.set(**{"spacer.native_mbp": False})
