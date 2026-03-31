@@ -1,0 +1,35 @@
+\section*{Future Plans}
+
+\subsection*{Milestone summary}
+
+\begin{description}[leftmargin=3.2cm]
+  \item[Milestone 1 \qquad] Literature review and naive CHC pipeline - \textit{completed}: CHC theory studied, Chiron-to-CHC semantics formalised, Z3 Fixedpoint playground implemented. First end-to-end pipeline with basic CHC encoding and property checking developed, supporting three modes: \texttt{default}, \texttt{universal}, \texttt{specific}, but with limited optimizations and test coverage.
+  \item[Milestone 2 \qquad] End-to-end robust CHC verification pipeline - \textit{completed}: This milestone focused on strenghtening the full IR-to-CHC translation pipeline, adding support for checking property at program termination, restricting to 15-degree mutliple grid for determinsm in restricted case and support optimization for special cases.
+  \item[Final Submission] Further optimization and user-friendly API - \textit{pending}: The final milestone will focus on improving the pipeline's efficiency through further encoding optimizations and solver parameter tuning. Additionally, efforts will be directed towards developing a user-friendly API to enhance accessibility and usability for end-users. This phase will also include final documentation, a polished test suite, and a reproducible end-to-end tool.
+\end{description}
+
+\subsection*{Planned work}
+
+\subsubsection*{(a) Optimizations}
+We plan to work on additional optimizations to further enhance the performance of the CHC encoding and solver interaction, and user hints to guide the solver. These include :
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Property-aware State Projection:} For many properties, only a subset of the program's state space is relevant. We will explore techniques to project the state space onto relevant dimensions, reducing the complexity of the CHC encoding and improving solver performance.
+  \item \textbf{Strengthening of Turn-Safety Check:} Right now, the turn-safety check is exceedingly conservaive, which leads to a large number of unknown results. We will investigate ways to strengthen this check, potentially by incorporating additional program invariants or leveraging more precise abstractions of the program's behavior.
+  \item $\texttt{focus\_vars = [ ]}$: Allowing users to specify a subset of variables that are most relevant to the property being checked, enabling the solver to focus on a smaller state space.
+  \item \textbf{Recursive summarization for perfectly nested affine loops:} If the inner loop is summarizable, we can summarize it first into one affine state transformer, and then summarize the outer loop with the inner loop summary as a single state transformer. This can significantly reduce the size of the CHC encoding for nested loops.
+\end{itemize}
+
+\subsubsection*{(b) User-friendly API development}
+To make the pipeline more accessible, planned work includes:
+\begin{itemize}[leftmargin=1.5em]
+  \item \textbf{Variable Domain Declarations:} Instead of constraining the user to declare a single initial value for variables in the specific mode, we will allow users to specify a domain of possible initial values. This will enable more comprehensive verification while still maintaining a manageable state space.
+  \item \textbf{Semantic Property Specification:} Right now, the users need to specify the properties in the form of raw property strings, which can be difficult to use for non-experts. We aim to add helpers like $\texttt{heading\_in(range)}$, $position\_in\_box(xmax, xmin, max, ymin)$, $pen\_is\_down()$ etc. to allow users to specify properties in a more intuitive and domain-specific manner, abstracting away the underlying CHC encoding details. 
+\end{itemize}
+
+\subsubsection*{(c) Final integration and deliverables}
+The final phase will consolidate all components into a cohesive tool, including:
+\begin{itemize}[leftmargin=1.5em]
+  \item Stabilizing CLI outputs and ensuring reproducibility across environments.
+  \item Completing the final report and preparing the project poster.
+  \item Delivering a fully documented and user-friendly verification framework.
+\end{itemize}

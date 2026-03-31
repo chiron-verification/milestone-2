@@ -1,0 +1,22 @@
+\section*{Analysis}
+
+\subsection*{Strengths of the implementation}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Broad verification coverage:} The pipeline supports default, universal and specific modes, now augmented with terminating-state properties (e.g., the turtle eventually reaches a target), enabling richer correctness questions.
+    \item \textbf{Improved solver efficiency:} The new \texttt{OptimizationLevel.BASIC} path for universal properties reduces solver overhead and makes universal queries feasible on more complex programs, specifically those with loops, and the new heading-grid safety hints significantly reduce timeouts for geometric programs.
+    \item \textbf{Heading-grid safety hints:} The introduction of heading-grid-based safety hints significantly reduces solver timeouts for geometric programs where the user is sure the turtle will only turn in multiples of 15 degrees.
+    %TODO: make more specific
+    \item \textbf{Stronger empirical validation:} Performance tests and visual analyses help compare the impact of optimizations as heading-grid safety hints.
+    \item \textbf{Improved test coverage:} The test suite now includes more diverse cases, covering both geometric and arithmetic properties as well as terminating state properties, and has been expanded to include stress tests for deeper loops and complex properties.
+\end{itemize}
+
+\subsection*{Limitations of the implementation}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Limitation to heading-grid safety:} Movement commands that go out of the heading grid (e.g., 22.5 degree turns) lead to unknown verdict irrespective of the property.
+    \item \textbf{Nonlinear arithmetic fragility:} Multiplicative constraints and non-linear relationships can still produce \texttt{UNKNOWN} results or long runtimes, especially when combined with geometric constraints.
+    \item \textbf{Structured Geometric Reasoning:} Despite the hints and optimizations, some programs and properties involving complex geometric reasoning (e.g., intricate heading interactions) still lead to timeouts, indicating room for further encoding-level improvements.
+    \item \textbf{Conservative Approach to Optimization:} The optimizations are designed to be sound but may miss opportunities, like in heading-grid safety check, a multiplication will only be considered a multiple of 15 if both the terms are multiples of 15, which is a sound but conservative check that may miss some cases where the product is a multiple of 15. Similarly for loop summarization, the current implementation only summarizes loops with a single update pattern, which may miss opportunities for summarization in more complex loops. 
+    \item \textbf{Limited scalability validation:} While the test suite has grown, scalability for programs with extremely large loop counts or deeply nested structures remains unproven.
+\end{itemize}

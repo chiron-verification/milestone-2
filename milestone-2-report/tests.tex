@@ -1,0 +1,68 @@
+\section*{Tests}
+\label{sec:tests}
+
+\subsection*{Correctness Tests}\label{subsec:correctness_tests}
+The correctness suite resides in
+\texttt{CHC-Verification/correctness\_tests/} and is executed with
+\texttt{pytest} over \texttt{unittest.TestCase}-based test classes. The fixture set includes 64 \texttt{.tl} programs across the three modes, covering a wide range of semantic properties and edge cases. These fixtue programs can be found in \texttt{CHC-Verification/correctness\_tests/programs/}.
+
+\subsubsection*{Evaluation modules and responsibilities}
+
+\begin{longtable}{p{0.20\textwidth} p{0.80\textwidth}}
+\toprule
+\textbf{File} & \textbf{Role in evaluation} \\
+\midrule
+\texttt{test\_default.py} & Validates concrete-start-state verification in \texttt{default} mode, including arithmetic, geometric, pen-state, directional, heading-grid, trigonometric, and nested-loop behaviors. \\
+\texttt{test\_specific.py} & Validates parameterized initialization in \texttt{specific} mode, with boundary-sensitive outcomes under user-supplied parameter dictionaries. \\
+\texttt{test\_universal.py} & Validates symbolic/unconstrained initialization in \texttt{universal} mode, API-level validation errors, heading-grid handling, and terminating-scope properties. \\
+\texttt{helpers.py} & Shared harness for loading programs, invoking \texttt{CHC\_Verification}, building assertion contexts, and standardizing property checks. \\
+\texttt{README.md} & Documents suite structure, mode coverage, fixture list, and execution commands. \\
+\bottomrule
+\end{longtable}
+
+\subsubsection*{Coverage snapshot}
+
+\begin{itemize}[leftmargin=1.5em]
+	\item Total collected correctness tests: \textbf{206}
+	\item Mode split: \textbf{48} (default), \textbf{70} (specific), \textbf{90} (universal)
+	\item Fixture programs in \texttt{programs/}: \textbf{64} \texttt{.tl} files
+	\item Explicitly skipped tests: \textbf{6} timeout-marked heading/trig-heavy scenarios
+\end{itemize}
+
+\subsubsection*{Category coverage across modes}
+
+\begin{itemize}[leftmargin=1.5em]
+	\item \textbf{Default mode:} arithmetic invariants, geometric bounds, pen-state properties, directional/heading checks, and advanced nested control-flow fixtures.
+	\item \textbf{Specific mode:} same semantic families under concrete parameter assignments, including multi-parameter and chained-update programs.
+	\item \textbf{Universal mode:} unconstrained initial-state reasoning, relational arithmetic properties, API-validation behavior, and terminating-scope checks.
+\end{itemize}
+
+\subsubsection*{How to run}
+
+\textbf{From repository root (recommended):}
+\begin{lstlisting}[style=terminal, language=bash]
+cd Chiron-Framework/ChironCore
+source .venv/bin/activate
+cd ../../CHC-Verification/correctness_tests
+pytest -q
+\end{lstlisting}
+
+\textbf{Useful variants:}
+\begin{lstlisting}[style=terminal, language=bash]
+# verbose mode
+pytest -v
+
+# collect-only sanity check
+pytest --collect-only -q
+
+# run one mode file
+pytest test_default.py -q
+
+# run one test class
+pytest test_specific.py::TestSpecificArithmetic -q
+
+# run one test case
+pytest test_universal.py::TestUniversalAPI::test_invalid_mode_error -q
+\end{lstlisting}
+
+\subsection*{Performance Tests}\label{subsec:performance_tests}
