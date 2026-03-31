@@ -4,7 +4,7 @@
 \subsection*{Correctness Tests}\label{subsec:correctness_tests}
 The correctness suite resides in
 \texttt{CHC-Verification/correctness\_tests/} and is executed with
-\texttt{pytest} over \texttt{unittest.TestCase}-based test classes.
+\texttt{pytest} over \texttt{unittest.TestCase}-based test classes. The fixture set includes 64 \texttt{.tl} programs across the three modes, covering a wide range of semantic properties and edge cases. These fixtue programs can be found in \texttt{CHC-Verification/correctness\_tests/programs/}.
 
 \subsubsection*{Evaluation modules and responsibilities}
 
@@ -24,8 +24,8 @@ The correctness suite resides in
 
 \begin{itemize}[leftmargin=1.5em]
 	\item Total collected correctness tests: \textbf{206}
-	\item Mode split: \textbf{46} (default), \textbf{70} (specific), \textbf{90} (universal)
-	\item Fixture programs in \texttt{programs/}: \textbf{63} \texttt{.tl} files
+	\item Mode split: \textbf{48} (default), \textbf{70} (specific), \textbf{90} (universal)
+	\item Fixture programs in \texttt{programs/}: \textbf{64} \texttt{.tl} files
 	\item Explicitly skipped tests: \textbf{6} timeout-marked heading/trig-heavy scenarios
 \end{itemize}
 
@@ -64,77 +64,5 @@ pytest test_specific.py::TestSpecificArithmetic -q
 # run one test case
 pytest test_universal.py::TestUniversalAPI::test_invalid_mode_error -q
 \end{lstlisting}
-
-\subsubsection*{Fixture programs (\texttt{.tl}) used in correctness evaluation}
-
-\begin{longtable}{p{0.30\textwidth} p{0.70\textwidth}}
-\toprule
-\textbf{Fixture file} & \textbf{Purpose in tests} \\
-\midrule
-\texttt{assign\_algebra.tl}  & Multi-variable algebraic assignment flow. \\
-\texttt{assign\_basic.tl}  & Basic assignment and scalar update sanity checks. \\
-\texttt{branchy\_non\_grid.tl}  & Branch-induced heading behavior that can leave the 15-degree grid. \\
-\texttt{conditional.tl}  & Conditional branch semantics and path-sensitive invariants. \\
-\texttt{flower\_nested\_pen.tl}  & Nested loops with pen-state and geometric progression. \\
-\texttt{forward\_square.tl}  & Square drawing using forward and 90-degree turns \\
-\texttt{goto\_accum.tl}  & Coordinate accumulation with goto-based motion. \\
-\texttt{goto\_computed.tl}  & Computed goto expressions with arithmetic state coupling. \\
-\texttt{loop\_accum.tl}  & Loop-based accumulation and bound preservation. \\
-\texttt{loop\_adv.tl}  & More complex loop interactions and value evolution. \\
-\texttt{loop\_basic.tl}  & Basic counted-loop semantics and monotonic updates. \\
-\texttt{loop\_cond.tl}  & Conditional logic embedded inside loops. \\
-\texttt{loop\_nested.tl}  & Nested repeat control-flow behavior. \\
-\texttt{maze\_counter.tl}  & Counter-heavy control-flow with parameterized transitions. \\
-\texttt{param\_accumulate.tl}  & Parameterized accumulation behavior under concrete starts. \\
-\texttt{param\_chain.tl}  & Chained assignments/updates from seeded parameters. \\
-\texttt{param\_cond.tl}  & Parameter-driven branch selection behavior. \\
-\texttt{param\_countdown.tl}  & Countdown loop with boundary-sensitive outcomes. \\
-\texttt{param\_goto.tl}  & Parameterized goto endpoints and geometric constraints. \\
-\texttt{param\_loop.tl}  & Parameterized loop evolution and final-state checks. \\
-\texttt{param\_loop\_move.tl}  & Looped movement with parameterized displacement. \\
-\texttt{param\_nested\_cond.tl}  & Nested conditionals keyed on concrete parameter ranges. \\
-\texttt{param\_pen.tl}  & Parameter-gated pen-state transitions. \\
-\texttt{param\_pen\_cond.tl}  & Conditional pen behavior with threshold parameters. \\
-\texttt{param\_scale.tl}  & Parameterized scaling and arithmetic relation checks. \\
-\texttt{pen\_only.tl}  & Pen-up/pen-down semantics without movement confounders. \\
-\texttt{pen\_toggle.tl}  & Alternating pen-state transitions across steps. \\
-\texttt{pen\_with\_var.tl}  & Variable-controlled pen transitions. \\
-\texttt{read\_before\_write.tl}  & Semantics when reads occur before first explicit assignment. \\
-\texttt{spiral\_grid\_goto.tl}  & Grid-respecting spiral-like goto traversal. \\
-\texttt{square\_goto.tl}  & Square traversal using goto commands. \\
-\texttt{triangle\_nested\_pen.tl}  & Nested-loop triangle pattern with pen-state coupling. \\
-\texttt{turns\_15.tl}  & Turn-only program preserving 15-degree heading lattice. \\
-\texttt{turns\_only.tl}  & Pure heading updates without translational movement. \\
-\texttt{two\_params.tl}  & Two-parameter relational arithmetic and order constraints. \\
-\texttt{u\_abs\_diff\_branching.tl} & Symbolic branch merges with absolute-difference invariants. \\
-\texttt{u\_branch\_always\_mul\_1} & Branching turns that preserve multiple-of-15 headings. \\
-\texttt{u\_branch\_always\_mul\_1.tl} & Advanced branch variant of heading-grid-preserving turns. \\
-\texttt{u\_branch\_merge\_affine.tl} & Affine arithmetic relations across merged symbolic paths. \\
-\texttt{u\_branch\_pen.tl}  & Symbolic branch effects on pen-state outcomes. \\
-\texttt{u\_branch\_pen\_adv.tl} & Advanced branch/pen interactions under symbolic starts. \\
-\texttt{u\_clamp\_to\_zero.tl} & Terminating-scope clamping and non-negativity guarantees. \\
-\texttt{u\_euclid\_avg.tl}  & Euclidean-style arithmetic identities over symbolic inputs. \\
-\texttt{u\_fixed\_left.tl}  & Deterministic left-turn heading evolution checks. \\
-\texttt{u\_fixed\_target.tl}  & Universal movement toward fixed geometric targets. \\
-\texttt{u\_fixed\_target\_user.tl} & Fixed-target relations tied to symbolic user variables. \\
-\texttt{u\_heading\_non\_grid.tl} & Demonstrates reachable non-grid headings (safety failure case). \\
-\texttt{u\_init\_core.tl}  & Baseline universal initial-state semantics checks. \\
-\texttt{u\_loop\_diagonal.tl}  & Symbolic diagonal loop movement and heading constraints. \\
-\texttt{u\_loop\_pen.tl}  & Loop-driven pen-state properties under symbolic starts. \\
-\texttt{u\_mul\_15\_heading\_o.tl} & Multiplicative heading relations constrained to grid-safe turns. \\
-\texttt{u\_net\_heading\_preserved.tl} & Net heading-preservation under balanced turn sequences. \\
-\texttt{u\_net\_zero\_turn.tl} & Sequences with zero net heading change. \\
-\texttt{u\_normalize\_x.tl}  & Arithmetic normalization-style updates over symbolic values. \\
-\texttt{u\_on\_spot\_turn.tl} & In-place turning behavior and heading range invariants. \\
-\texttt{u\_pen\_no\_touch.tl} & Pen-state invariants where drawing state should remain unchanged. \\
-\texttt{u\_pen\_up.tl}  & Pen-up preservation guarantees across symbolic traces. \\
-\texttt{u\_product\_zero.tl}  & Product-based arithmetic relations and zero constraints. \\
-\texttt{u\_same\_postcondition.tl}  & Distinct symbolic paths converging to a shared postcondition. \\
-\texttt{u\_swap\_with\_temp.tl} & Swap semantics using a temporary variable. \\
-\texttt{u\_swap\_without\_tmp.tl} & Swap-style arithmetic relations without temporary storage. \\
-\texttt{u\_two\_step\_affine.tl} & Two-step affine transformations over symbolic inputs. \\
-\texttt{u\_xcor\_fixed.tl}  & Program preserving fixed x-coordinate relations. \\
-\bottomrule
-\end{longtable}
 
 \subsection*{Performance Tests}\label{subsec:performance_tests}

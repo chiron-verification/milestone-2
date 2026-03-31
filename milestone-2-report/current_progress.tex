@@ -345,7 +345,7 @@ loop-entry PC directly to loop-exit PC and emits any required summarized
 instruction-wise rule generation remains active. This preserves soundness while
 reducing rule count and symbolic clutter on common deterministic repeat patterns.
 
-An additional semantic tightening is that movement trig handling was upgraded
+An additional semantic tightening is that movement trigonometric handling was upgraded
 from interval over-approximation buckets to exact 15-degree lookup values
 (\texttt{cos\_sin\_exact\_z3}), aligning the transition encoding with the new
 heading-grid reasoning.
@@ -369,9 +369,7 @@ value, then applies a precedence rule:
 	the explicit \texttt{BadHeading} query is performed.
 \end{itemize}
 
-In \texttt{OptimizationLevel.BASIC}, if static analysis proves every turn is safe
-(\texttt{is\_all\_turn\_safe}), the heading-grid check short-circuits to PASSED,
-avoiding unnecessary solver effort.
+Thus, the user can choose between a sound check that provides explicit feedback on grid safety or a strong assumption that may speed up verification when grid safety is expected or irrelevant. The verifier can't guarantee soundness when skipping the check, so this is a user-controlled tradeoff.
 
 \subsection*{API Usage Guide}\label{subsec:api_usage_guide}
 

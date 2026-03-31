@@ -76,6 +76,11 @@ class TestDefaultArithmetic(ChironTestCase):
         self.load("loop_adv.tl")
         self.assert_property_fail("x_bound", "x <= 70")
 
+    def test_arith_loop_xy_dep_y_ge_x_basic_opt_pass(self):
+        """loop_xy_dep.tl: x increases by 10, y accumulates x -> y >= x always holds."""
+        self.load("loop_xy_dep.tl", optimization_level=OptimizationLevel.BASIC)
+        self.assert_property_pass("y_ge_x", "y >= x")
+
 class TestDefaultGeometric(ChironTestCase):
     """Geometric (bounded box / safety region) properties using goto programs."""
 

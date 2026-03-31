@@ -10,19 +10,20 @@
 
 \subsection*{Planned work}
 
-\subsubsection*{(a) Optimization and robustness}
-The final milestone will prioritize:
+\subsubsection*{(a) Optimizations}
+We plan to work on additional optimizations to further enhance the performance of the CHC encoding and solver interaction, and user hints to guide the solver. These include :
 \begin{itemize}[leftmargin=1.5em]
-  \item Reducing solver overhead by refining CHC encodings and addressing inefficiencies in trigonometric reasoning.
-  \item Extending the benchmark suite with complex and computationally intensive programs.
-  \item Minimizing \texttt{UNKNOWN} verdicts through encoding-level improvements and solver tuning.
+  \item \textbf{Property-aware State Projection:} For many properties, only a subset of the program's state space is relevant. We will explore techniques to project the state space onto relevant dimensions, reducing the complexity of the CHC encoding and improving solver performance.
+  \item \textbf{Strengthening of Turn-Safety Check:} Right now, the turn-safety check is exceedingly conservaive, which leads to a large number of unknown results. We will investigate ways to strengthen this check, potentially by incorporating additional program invariants or leveraging more precise abstractions of the program's behavior.
+  \item $\texttt{focus\_vars = [ ]}$: Allowing users to specify a subset of variables that are most relevant to the property being checked, enabling the solver to focus on a smaller state space.
+  \item \textbf{Recursive summarization for perfectly nested affine loops:} If the inner loop is summarizable, we can summarize it first into one affine state transformer, and then summarize the outer loop with the inner loop summary as a single state transformer. This can significantly reduce the size of the CHC encoding for nested loops.
 \end{itemize}
 
 \subsubsection*{(b) User-friendly API development}
 To make the pipeline more accessible, planned work includes:
 \begin{itemize}[leftmargin=1.5em]
-  \item Designing and implementing a high-level API for easier integration with external tools.
-  \item Providing concrete guarantee on what scenarios the user can expect to get a definitive answer and when they should expect an unknown.
+  \item \textbf{Variable Domain Declarations:} Instead of constraining the user to declare a single initial value for variables in the specific mode, we will allow users to specify a domain of possible initial values. This will enable more comprehensive verification while still maintaining a manageable state space.
+  \item \textbf{Semantic Property Specification:} Right now, the users need to specify the properties in the form of raw property strings, which can be difficult to use for non-experts. We aim to add helpers like $\texttt{heading\_in(range)}$, $position\_in\_box(xmax, xmin, max, ymin)$, $pen\_is\_down()$ etc. to allow users to specify properties in a more intuitive and domain-specific manner, abstracting away the underlying CHC encoding details. 
 \end{itemize}
 
 \subsubsection*{(c) Final integration and deliverables}

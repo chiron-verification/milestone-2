@@ -3,6 +3,7 @@ import sys
 from z3 import *
 from ChironAST import ChironAST
 from optimization_helpers import *
+from optimization_helpers import _MULT15_VALUES
 
 def cos_sin_exact_z3(h, i):
     cos_expr = RealVal(0)
