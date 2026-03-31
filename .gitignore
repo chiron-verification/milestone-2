@@ -167,3 +167,4 @@ cython_debug/
 testcases/
 build/
 **/uv.lock
+main.synctex.gz
