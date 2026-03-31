@@ -17,11 +17,9 @@ _CSV_FIELDS = [
     # No hint (check_heading_always_on_grid)
     "verdict_none",  "result_none",  "build_s_none",  "solve_s_none",
     "verdict_basic", "result_basic", "build_s_basic", "solve_s_basic",
-    "verdict_aggressive", "result_aggressive", "build_s_aggressive", "solve_s_aggressive",
     # With hint (heading_on_grid_always)
     "verdict_none_hint",  "result_none_hint",  "build_s_none_hint",  "solve_s_none_hint",
     "verdict_basic_hint", "result_basic_hint", "build_s_basic_hint", "solve_s_basic_hint",
-    "verdict_aggressive_hint", "result_aggressive_hint", "build_s_aggressive_hint", "solve_s_aggressive_hint",
 ]
 
 def _verdict(status):
@@ -125,10 +123,10 @@ class PerformanceTestCase(unittest.TestCase):
 
     def time_check(self, name: str, expr: str, expected_status: str = None):
         """
-        Run verification under all three OptimizationLevels × two hint modes,
+        Run verification under two OptimizationLevels × two hint modes,
         write a single combined CSV row, and return
-        (result_none, result_basic, result_aggressive,
-         result_none_hint, result_basic_hint, result_aggressive_hint).
+        (result_none, result_basic,
+         result_none_hint, result_basic_hint).
 
         No-hint runs use ["check_heading_always_on_grid"] (the default, which
         queries heading safety).  Hint runs use ["heading_on_grid_always"]
@@ -154,12 +152,10 @@ class PerformanceTestCase(unittest.TestCase):
             except Exception as e:
                 return None, e
 
-        result_none,            exc_none            = _safe_run(OptimizationLevel.NONE,       _no_hint)
-        result_basic,           exc_basic           = _safe_run(OptimizationLevel.BASIC,      _no_hint)
-        result_aggressive,      exc_aggressive      = _safe_run(OptimizationLevel.AGGRESSIVE, _no_hint)
-        result_none_hint,       exc_none_hint       = _safe_run(OptimizationLevel.NONE,       _with_hint)
-        result_basic_hint,      exc_basic_hint      = _safe_run(OptimizationLevel.BASIC,      _with_hint)
-        result_aggressive_hint, exc_aggressive_hint = _safe_run(OptimizationLevel.AGGRESSIVE, _with_hint)
+        result_none,      exc_none      = _safe_run(OptimizationLevel.NONE,  _no_hint)
+        result_basic,     exc_basic     = _safe_run(OptimizationLevel.BASIC, _no_hint)
+        result_none_hint, exc_none_hint = _safe_run(OptimizationLevel.NONE,  _with_hint)
+        result_basic_hint,exc_basic_hint= _safe_run(OptimizationLevel.BASIC, _with_hint)
 
         def _fmt(v):
             return f"{v:.4f}" if v is not None else ""
@@ -170,12 +166,10 @@ class PerformanceTestCase(unittest.TestCase):
         def _solve(r):
             return _fmt(r.solve_times[0] if r and r.solve_times else None)
 
-        v_none            = _verdict(_raw_status(result_none,            exc_none))
-        v_basic           = _verdict(_raw_status(result_basic,           exc_basic))
-        v_aggressive      = _verdict(_raw_status(result_aggressive,      exc_aggressive))
-        v_none_hint       = _verdict(_raw_status(result_none_hint,       exc_none_hint))
-        v_basic_hint      = _verdict(_raw_status(result_basic_hint,      exc_basic_hint))
-        v_aggressive_hint = _verdict(_raw_status(result_aggressive_hint, exc_aggressive_hint))
+        v_none       = _verdict(_raw_status(result_none,      exc_none))
+        v_basic      = _verdict(_raw_status(result_basic,     exc_basic))
+        v_none_hint  = _verdict(_raw_status(result_none_hint, exc_none_hint))
+        v_basic_hint = _verdict(_raw_status(result_basic_hint,exc_basic_hint))
 
         _write_perf_row({
             "file":                    self._tl_file,
@@ -188,10 +182,6 @@ class PerformanceTestCase(unittest.TestCase):
             "result_basic":            _result(v_basic, expected_status) if expected_status is not None else "",
             "build_s_basic":           _fmt(result_basic.build_time) if result_basic else "",
             "solve_s_basic":           _solve(result_basic),
-            "verdict_aggressive":      v_aggressive,
-            "result_aggressive":       _result(v_aggressive, expected_status) if expected_status is not None else "",
-            "build_s_aggressive":      _fmt(result_aggressive.build_time) if result_aggressive else "",
-            "solve_s_aggressive":      _solve(result_aggressive),
             "verdict_none_hint":       v_none_hint,
             "result_none_hint":        _result(v_none_hint, expected_status) if expected_status is not None else "",
             "build_s_none_hint":       _fmt(result_none_hint.build_time) if result_none_hint else "",
@@ -200,47 +190,38 @@ class PerformanceTestCase(unittest.TestCase):
             "result_basic_hint":       _result(v_basic_hint, expected_status) if expected_status is not None else "",
             "build_s_basic_hint":      _fmt(result_basic_hint.build_time) if result_basic_hint else "",
             "solve_s_basic_hint":      _solve(result_basic_hint),
-            "verdict_aggressive_hint": v_aggressive_hint,
-            "result_aggressive_hint":  _result(v_aggressive_hint, expected_status) if expected_status is not None else "",
-            "build_s_aggressive_hint": _fmt(result_aggressive_hint.build_time) if result_aggressive_hint else "",
-            "solve_s_aggressive_hint": _solve(result_aggressive_hint),
         }, self.MODE)
 
-        for exc in (exc_none, exc_basic, exc_aggressive,
-                    exc_none_hint, exc_basic_hint, exc_aggressive_hint):
+        for exc in (exc_none, exc_basic, exc_none_hint, exc_basic_hint):
             if exc:
                 raise exc
 
-        return (result_none, result_basic, result_aggressive,
-                result_none_hint, result_basic_hint, result_aggressive_hint)
+        return (result_none, result_basic, result_none_hint, result_basic_hint)
 
     def assert_and_time(self, name: str, expr: str, expected_status: str,
                         max_build_s: float = None, max_solve_s: float = None):
         """
-        Run verification under all three optimization levels * two hint modes.
+        Run verification under two optimization levels * two hint modes.
 
-        For each of the 6 configurations:
+        For each of the 4 configurations:
           - verdict = raw solver output (PASSED / FAILED / UNKNOWN)
           - result  = PASSED if verdict==expected_status, SKIPPED if UNKNOWN, FAILED otherwise
 
         Assertions are only made for configurations whose verdict is not UNKNOWN;
         an UNKNOWN verdict (solver timeout) counts as SKIPPED, not a test failure.
-        Returns (result_none, result_basic, result_aggressive,
-                 result_none_hint, result_basic_hint, result_aggressive_hint).
+        Returns (result_none, result_basic, result_none_hint, result_basic_hint).
         """
-        (result_none, result_basic, result_aggressive,
-         result_none_hint, result_basic_hint, result_aggressive_hint) = self.time_check(name, expr, expected_status)
+        (result_none, result_basic,
+         result_none_hint, result_basic_hint) = self.time_check(name, expr, expected_status)
 
         if result_none.error == ReturnError.ERROR:
             self.fail(f"API error: {result_none.expr} — {result_none.advice}")
 
         for r, label in (
-            (result_none,            "NONE"),
-            (result_basic,           "BASIC"),
-            (result_aggressive,      "AGGRESSIVE"),
-            (result_none_hint,       "NONE+hint"),
-            (result_basic_hint,      "BASIC+hint"),
-            (result_aggressive_hint, "AGGRESSIVE+hint"),
+            (result_none,      "NONE"),
+            (result_basic,     "BASIC"),
+            (result_none_hint, "NONE+hint"),
+            (result_basic_hint,"BASIC+hint"),
         ):
             if r.status != "UNKNOWN":
                 self.assertEqual(
@@ -257,5 +238,4 @@ class PerformanceTestCase(unittest.TestCase):
             self.assertLess(solve_t, max_solve_s,
                 f"Solve time {solve_t:.3f}s exceeded limit {max_solve_s}s")
 
-        return (result_none, result_basic, result_aggressive,
-                result_none_hint, result_basic_hint, result_aggressive_hint)
+        return (result_none, result_basic, result_none_hint, result_basic_hint)
