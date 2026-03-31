@@ -2,4 +2,33 @@
 
 \subsection*{Milestone summary}
 
+\begin{description}[leftmargin=3.2cm]
+  \item[Milestone 1 \qquad] Literature review and naive CHC pipeline - \textit{completed}: CHC theory studied, Chiron-to-CHC semantics formalised, Z3 Fixedpoint playground implemented. First end-to-end pipeline with basic CHC encoding and property checking developed, supporting three modes: \texttt{default}, \texttt{universal}, \texttt{specific}, but with limited optimizations and test coverage.
+  \item[Milestone 2 \qquad] End-to-end robust CHC verification pipeline - \textit{completed}: This milestone focused on strenghtening the full IR-to-CHC translation pipeline, adding support for checking property at program termination, restricting to 15-degree mutliple grid for determinsm in restricted case and support optimization for special cases.
+  \item[Final Submission] Further optimization and user-friendly API - \textit{pending}: The final milestone will focus on improving the pipeline's efficiency through further encoding optimizations and solver parameter tuning. Additionally, efforts will be directed towards developing a user-friendly API to enhance accessibility and usability for end-users. This phase will also include final documentation, a polished test suite, and a reproducible end-to-end tool.
+\end{description}
+
 \subsection*{Planned work}
+
+\subsubsection*{(a) Optimization and robustness}
+The final milestone will prioritize:
+\begin{itemize}[leftmargin=1.5em]
+  \item Reducing solver overhead by refining CHC encodings and addressing inefficiencies in trigonometric reasoning.
+  \item Extending the benchmark suite with complex and computationally intensive programs.
+  \item Minimizing \texttt{UNKNOWN} verdicts through encoding-level improvements and solver tuning.
+\end{itemize}
+
+\subsubsection*{(b) User-friendly API development}
+To make the pipeline more accessible, planned work includes:
+\begin{itemize}[leftmargin=1.5em]
+  \item Designing and implementing a high-level API for easier integration with external tools.
+  \item Providing concrete guarantee on what scenarios the user can expect to get a definitive answer and when they should expect an unknown.
+\end{itemize}
+
+\subsubsection*{(c) Final integration and deliverables}
+The final phase will consolidate all components into a cohesive tool, including:
+\begin{itemize}[leftmargin=1.5em]
+  \item Stabilizing CLI outputs and ensuring reproducibility across environments.
+  \item Completing the final report and preparing the project poster.
+  \item Delivering a fully documented and user-friendly verification framework.
+\end{itemize}

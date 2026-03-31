@@ -467,6 +467,7 @@ class TestUniversalDirectional(ChironTestCase):
         self.load(
             "u_mul_15_heading_on_grid.tl",
             property_scope="terminating",
+            hints=["heading_on_grid_always"],
             optimization_level=OptimizationLevel.BASIC,
         )
         self.assert_property_pass("t_is_15m", "t == 15 * m")
@@ -476,6 +477,7 @@ class TestUniversalDirectional(ChironTestCase):
         self.load(
             "u_net_heading_preserved.tl",
             property_scope="all",
+            hints=["heading_on_grid_always"],   
             optimization_level=OptimizationLevel.BASIC,
         )
         self.assert_property_pass("heading_range", "And(heading >= 0, heading < 360)")

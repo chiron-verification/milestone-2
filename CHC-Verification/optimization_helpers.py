@@ -2,7 +2,6 @@ from z3 import *
 from ChironAST import ChironAST
 from math import cos, sin, pi
 from fractions import Fraction
-from z3 import z3util
 
 _MULT15_VALUES = {
     deg: (Fraction(cos(deg * pi / 180)).limit_denominator(10**9),

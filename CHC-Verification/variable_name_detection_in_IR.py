@@ -8,12 +8,11 @@ sys.path.append(base_dir)
 sys.path.insert(0, os.path.join(base_dir, "Chiron-Framework", "ChironCore"))
 
 from ChironAST import ChironAST
-from enum import Enum, auto
+from enum import Enum
 
 class OptimizationLevel(Enum):
     NONE = 0
     BASIC = 1
-    AGGRESSIVE = 2
 
 def pretty_print_symbol_table(symbol_table):
     print("---------- Symbol Table (User Variables) ---------")

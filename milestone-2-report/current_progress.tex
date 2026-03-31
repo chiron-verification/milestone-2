@@ -3,49 +3,48 @@
 Overview of the progress made since the first milestone is as follows:
 
 \begin{itemize}[leftmargin=1.5em]
-	\item \textbf{Pipeline refactoring into a callable API:}
+	\item \hyperref[subsec:callable_api]{\textbf{Pipeline refactoring into a callable API:}}
 	The verification flow is now exposed through \texttt{CHC\_Verification(\ldots)}
 	with structured output fields (status, advice, timing, and per-property results)
 	instead of an interactive-only CLI path.
 
-	\item \textbf{Optimization pipeline added:}
-	A \texttt{BASIC} optimization mode adds static IR analysis, turn-safety reasoning,
-	and summarizable-loop compression before CHC querying, while
-	\texttt{OptimizationLevel.NONE} retains the conservative baseline behavior.
-
-	\item \textbf{Property scope feature added:}
-	Properties can now be checked over all reachable states or restricted to
-	terminating states only (\texttt{property\_scope = "terminating"}).
-
-	\item \textbf{Heading-grid safety checks integrated:}
+	\item \hyperref[subsec:heading_grid_safety]{\textbf{Heading-grid safety checks integrated:}}
 	The verifier now models and queries heading-grid safety explicitly through
 	a dedicated \texttt{BadHeading} relation before property checking.
 
-	\item \textbf{Heading-grid hints integrated:}
+	\item \hyperref[subsec:property_scope]{\textbf{Property scope feature added:}}
+	Properties can now be checked over all reachable states or restricted to
+	terminating states only (\texttt{property\_scope = "terminating"}).
+
+	\item \hyperref[subsec:heading_grid_hints]{\textbf{Heading-grid hints integrated:}}
 	Users can either request verification of the heading-grid invariant
 	(\texttt{check\_heading\_always\_on\_grid}) or force an assumption
 	(\texttt{heading\_on\_grid\_always}) for faster runs on hard cases.
 
-	\item \textbf{Correctness tests:}
-	\textit{TODO}
-	
+	\item \hyperref[subsec:opt_pipeline]{\textbf{Optimization pipeline added:}}
+	A \texttt{BASIC} optimization mode adds static IR analysis, turn-safety reasoning,
+	and summarizable-loop compression before CHC querying, while
+	\texttt{OptimizationLevel.NONE} retains the conservative baseline behavior.
 
-	\item \textbf{Performance tests:}
+	\item \hyperref[subsec:correctness_tests]{\textbf{Correctness tests:}}
+	An expanded test suite now covers a wider variety of programs and properties, 
+	including terminating-state properties, tests with heading-grid hints, and 
+	some tests with \texttt{OptimizationLevel.BASIC} to validate correctness under optimization.
+
+	\item \hyperref[subsec:performance_tests]{\textbf{Performance tests:}}
 	\textit{TODO}
 \end{itemize}
 
 See \autoref{fig:main_pipeline_flow} for a visual overview of the main verification pipeline stages, responsibilities, and data flow, and the subsequent sections for detailed implementation notes on each major feature addition and refactor.
 The details of correctness and performance testing can be found in the \hyperref[sec:tests]{Tests section}.
 
-\subsection*{Main Pipeline Flow (Responsibilities and Data Flow)}
-
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[>=stealth, line width=1pt, font=\footnotesize]
 \tikzset{
-	stage/.style={draw, rounded corners=2.5mm, align=left, text width=4.9cm, minimum height=2.05cm, fill=blue!9},
+	stage/.style={draw, rounded corners=2.5mm, align=left, text width=4.2cm, minimum height=2.05cm, fill=blue!9},
 	heavy/.style={draw, rounded corners=2.5mm, align=left, text width=4.9cm, minimum height=2.55cm, fill=green!12},
-	gate/.style={draw, rounded corners=2.5mm, align=left, text width=4.9cm, minimum height=2.25cm, fill=orange!14}
+	gate/.style={draw, rounded corners=2.5mm, align=left, text width=4.0cm, minimum height=2.25cm, fill=orange!14}
 }
 
 % Two-column layout (snake flow)
@@ -125,11 +124,12 @@ termination unknown, timeout\\
 \draw[->, dashed] (n6.east) -- ++(1.4,0) -- ++(0,-6.2) -- (e1.east);
 
 \end{tikzpicture}
-\caption{Main verification pipeline showing stage responsibilities and data artifacts flowing through parsing, CHC construction, heading/scope controls, and final result aggregation.}
+\caption{Main verification pipeline showing stage responsibilities and data artifacts flowing through parsing, CHC construction, heading/scope controls, and final result aggregation:}
 \label{fig:main_pipeline_flow}
 \end{figure}
 
-\subsection*{Implementation Details: Callable Verification API}
+\subsection*{Implementation Details: Callable Verification API}\label{subsec:callable_api}
+
 \noindent\textit{\small File: \texttt{CHC-Verification/safety\_properties.py}}
 
 The prior interactive \texttt{\_\_main\_\_} flow was replaced by a callable entry
@@ -156,10 +156,111 @@ scope, hint format, and specific-mode parameters, then builds the fixedpoint,
 applies assumptions/pre-checks, and evaluates properties in a controlled
 \texttt{eval} context with restricted builtins.
 
-\subsection*{Implementation Details: Optimization Pipeline}
-\noindent\textit{\small Files: \texttt{CHC-Verification/optimization\_helpers.py}, \texttt{CHC-Verification/step\_rules.py}}
+\subsection*{Implementation Details: Heading-grid Safety Check}\label{subsec:heading_grid_safety}
+\textit{
+	Files:
+	\begin{enumerate}
+		\item \texttt{CHC-Verification/z3\_fixed\_point.py}
+		\item \texttt{CHC-Verification/init\_fixed\_point.py}
+		\item \texttt{CHC-Verification/step\_rules.py}
+		\item \texttt{CHC-Verification/heading\_grid.py}
+	\end{enumerate}
+}
 
 \begin{figure}[h]
+\centering
+\begin{tikzpicture}[>=stealth, line width=1pt, font=\footnotesize]
+\tikzset{
+	bhstage/.style={draw, rounded corners=2.5mm, align=left, text width=7.0cm, minimum height=1.9cm, fill=blue!9},
+	bhheavy/.style={draw, rounded corners=2.5mm, align=left, text width=8.5cm, minimum height=2.15cm, fill=green!12},
+	bhquery/.style={draw, rounded corners=2.5mm, align=left, text width=5.5cm, minimum height=2.0cm, fill=orange!14},
+	bhresult/.style={draw, rounded corners=2.5mm, align=left, text width=4.2cm, minimum height=1.75cm, fill=purple!10}
+}
+
+\node[bhstage] (b1) at (0,0)
+{\textbf{1. Define Relation}\\
+Create \texttt{BadHeading(\ldots)} with state signature\\
+\texttt{z3\_fixed\_point.py::\\z3\_fixed\_point\_invariant\_generation}};
+
+\node[bhstage] (b2) at (0,-2.8)
+{\textbf{2. Register and Seed}\\
+Register \texttt{BadHeading} in fixedpoint context\\
+\texttt{init\_fixed\_point.py::\\z3\_fixed\_point\_object\_with\_start\_state\_set}};
+
+\node[bhheavy] (b3) at (0,-6.0)
+{\textbf{3. Emit Violation Rules}\\
+For turn transitions, emit \texttt{BadHeading(next\_state)} when\\
+\texttt{Not(heading\_on\_grid(next\_heading))} can hold\\
+\texttt{step\_rules.py::chiron\_command\_to\_z3\_rule}};
+
+\node[bhquery] (b4) at (0,-9.6)
+{\textbf{4. Run Reachability Query}\\
+\texttt{Exists(vars, BadHeading(state))}\\
+\texttt{safety\_properties.py::\\CHC\_Verification}};
+
+\node[bhresult] (bsat) at (-5.0,-13.1)
+{\textbf{sat}\\
+grid violated\\
+\texttt{heading\_grid\_safe=FAILED}};
+
+\node[bhresult] (bunsat) at (0,-13.1)
+{\textbf{unsat}\\
+grid preserved\\
+\texttt{heading\_grid\_safe=PASSED}};
+
+\node[bhresult] (bunk) at (5.0,-13.1)
+{\textbf{unknown}\\
+solver undecided\\
+\texttt{heading\_grid\_safe=UNKNOWN}};
+
+\draw[->] (b1.south) -- node[right, align=center, fill=white, inner sep=1pt] {relation decl\\+ state arity} (b2.north);
+\draw[->] (b2.south) -- node[right, align=center, fill=white, inner sep=1pt] {registered relation\\in \texttt{fp}} (b3.north);
+\draw[->] (b3.south) -- node[right, align=center, fill=white, inner sep=1pt] {\texttt{BadHeading} rules\\from turns} (b4.north);
+
+\draw[->] (b4.south west) -- node[above, align=center, fill=white, inner sep=1pt] {query result:\\ sat} (bsat.north);
+\draw[->] (b4.south) -- node[right, align=center, fill=white, inner sep=1pt] {query result:\\ unsat} (bunsat.north);
+\draw[->] (b4.south east) -- node[above, align=center, fill=white, inner sep=1pt] {query result:\\ unknown} (bunk.north);
+
+\end{tikzpicture}
+
+\caption{BadHeading workflow for proving whether heading remains on the 15-degree grid and mapping query outcomes to verification status:}
+\label{fig:badheading_workflow}
+\end{figure}
+
+The new pipeline introduces a dedicated relation
+\texttt{BadHeading(\ldots)} at the invariant signature level and registers it in the fixedpoint context. Transition rules for turn commands can emit
+\texttt{BadHeading} consequences whenever \texttt{Not(heading\_on\_grid(next\_heading))}
+is reachable, see \autoref{fig:badheading_workflow} for the workflow.
+
+At API level, when checking is requested, the verifier queries
+\texttt{Exists(vars, BadHeading(state))}. The result semantics are:
+\texttt{sat -> heading\_grid\_safe = FAILED (overall UNKNOWN)},
+\texttt{unsat -> heading\_grid\_safe = PASSED (continue)},
+\texttt{unknown -> heading\_grid\_safe = UNKNOWN (overall UNKNOWN)}.
+
+This turns an implicit modeling assumption into an explicit proof obligation,
+improving interpretability of trig-sensitive verification outcomes.
+
+\subsection*{Implementation Details: Property Scope}\label{subsec:property_scope}
+\noindent\textit{\small File: \texttt{CHC-Verification/safety\_properties.py}}
+
+The new \texttt{property\_scope} input supports \texttt{"all"} and
+\texttt{"terminating"}. For terminating-only checks, the implementation:
+
+\begin{enumerate}[leftmargin=1.5em]
+	\item computes terminal PC as \texttt{len(ir)};
+	\item checks reachability of terminating states using
+	\texttt{Exists(vars, Inv(state) \& term\_guard)};
+	\item returns \texttt{UNKNOWN} early if termination is unreachable/unknown;
+	\item conjoins \texttt{term\_guard} into assumptions for all property queries.
+\end{enumerate}
+
+This keeps a single property-checking loop while changing the semantic domain of verification in a principled way.
+
+\subsection*{Implementation Details: Optimization Pipeline}\label{subsec:opt_pipeline}
+\noindent\textit{\small Files: \texttt{CHC-Verification/optimization\_helpers.py}, \texttt{CHC-Verification/step\_rules.py}}
+
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}[>=stealth, line width=1pt, font=\footnotesize]
 \tikzset{
@@ -227,8 +328,8 @@ Return \texttt{fp, Inv, BadHeading, state, next\_state, symbol\_table, counter\_
 \draw[->] (o8.south east) |- node[pos=0.25, left, align=center, fill=white, inner sep=1pt] {regular\\rules added} (o9.north east);
 
 \end{tikzpicture}
-\caption{BASIC optimization workflow: read IR, compute turn safety, detect and filter repeat loops to summarizable loops, then during iteration emit summarized \texttt{Inv}/\texttt{BadHeading} rules for eligible loops and regular rules for other operations.}
-\label{fig:optimization_workflow}
+\caption{BASIC optimization workflow: read IR, compute turn safety, detect and filter repeat loops to summarizable loops, then during iteration emit summarized \texttt{Inv}/\texttt{BadHeading} rules for eligible loops and regular rules for other operations:}
+\label{fig:opt_workflow}
 \end{figure}
 
 New optimazation layer with two supported modes. In
@@ -249,110 +350,10 @@ from interval over-approximation buckets to exact 15-degree lookup values
 (\texttt{cos\_sin\_exact\_z3}), aligning the transition encoding with the new
 heading-grid reasoning.
 The \texttt{OptimizationLevel.NONE} mode bypassed the optimization pipeline and performs standard verification.
-See \autoref{fig:optimization_workflow} for a visual overview of the optimization flow.
+See \autoref{fig:opt_workflow} for a visual overview of the optimization flow.
 
-\subsection*{Implementation Details: Property Scope}
-\noindent\textit{\small File: \texttt{CHC-Verification/safety\_properties.py}}
 
-The new \texttt{property\_scope} input supports \texttt{"all"} and
-\texttt{"terminating"}. For terminating-only checks, the implementation:
-
-\begin{enumerate}[leftmargin=1.5em]
-	\item computes terminal PC as \texttt{len(ir)};
-	\item checks reachability of terminating states using
-	\texttt{Exists(vars, Inv(state) \& term\_guard)};
-	\item returns \texttt{UNKNOWN} early if termination is unreachable/unknown;
-	\item conjoins \texttt{term\_guard} into assumptions for all property queries.
-\end{enumerate}
-
-This keeps a single property-checking loop while changing the semantic domain of verification in a principled way.
-
-\subsection*{Implementation Details: Heading-grid Safety Check}
-\textit{
-	Files:
-	\begin{enumerate}
-		\item \texttt{CHC-Verification/z3\_fixed\_point.py}
-		\item \texttt{CHC-Verification/init\_fixed\_point.py}
-		\item \texttt{CHC-Verification/step\_rules.py}
-		\item \texttt{CHC-Verification/heading\_grid.py}
-	\end{enumerate}
-}
-
-\begin{figure}[h]
-\centering
-\begin{tikzpicture}[>=stealth, line width=1pt, font=\footnotesize]
-\tikzset{
-	bhstage/.style={draw, rounded corners=2.5mm, align=left, text width=7.0cm, minimum height=1.9cm, fill=blue!9},
-	bhheavy/.style={draw, rounded corners=2.5mm, align=left, text width=8.5cm, minimum height=2.15cm, fill=green!12},
-	bhquery/.style={draw, rounded corners=2.5mm, align=left, text width=5.5cm, minimum height=2.0cm, fill=orange!14},
-	bhresult/.style={draw, rounded corners=2.5mm, align=left, text width=4.2cm, minimum height=1.75cm, fill=purple!10}
-}
-
-\node[bhstage] (b1) at (0,0)
-{\textbf{1. Define Relation}\\
-Create \texttt{BadHeading(\ldots)} with state signature\\
-\texttt{z3\_fixed\_point.py::\\z3\_fixed\_point\_invariant\_generation}};
-
-\node[bhstage] (b2) at (0,-2.8)
-{\textbf{2. Register and Seed}\\
-Register \texttt{BadHeading} in fixedpoint context\\
-\texttt{init\_fixed\_point.py::\\z3\_fixed\_point\_object\_with\_start\_state\_set}};
-
-\node[bhheavy] (b3) at (0,-6.0)
-{\textbf{3. Emit Violation Rules}\\
-For turn transitions, emit \texttt{BadHeading(next\_state)} when\\
-\texttt{Not(heading\_on\_grid(next\_heading))} can hold\\
-\texttt{step\_rules.py::chiron\_command\_to\_z3\_rule}};
-
-\node[bhquery] (b4) at (0,-9.6)
-{\textbf{4. Run Reachability Query}\\
-\texttt{Exists(vars, BadHeading(state))}\\
-\texttt{safety\_properties.py::\\CHC\_Verification}};
-
-\node[bhresult] (bsat) at (-5.0,-13.1)
-{\textbf{sat}\\
-grid violated\\
-\texttt{heading\_grid\_safe=FAILED}};
-
-\node[bhresult] (bunsat) at (0,-13.1)
-{\textbf{unsat}\\
-grid preserved\\
-\texttt{heading\_grid\_safe=PASSED}};
-
-\node[bhresult] (bunk) at (5.0,-13.1)
-{\textbf{unknown}\\
-solver undecided\\
-\texttt{heading\_grid\_safe=UNKNOWN}};
-
-\draw[->] (b1.south) -- node[right, align=center, fill=white, inner sep=1pt] {relation decl\\+ state arity} (b2.north);
-\draw[->] (b2.south) -- node[right, align=center, fill=white, inner sep=1pt] {registered relation\\in \texttt{fp}} (b3.north);
-\draw[->] (b3.south) -- node[right, align=center, fill=white, inner sep=1pt] {\texttt{BadHeading} rules\\from turns} (b4.north);
-
-\draw[->] (b4.south west) -- node[above, align=center, fill=white, inner sep=1pt] {query result:\\ sat} (bsat.north);
-\draw[->] (b4.south) -- node[right, align=center, fill=white, inner sep=1pt] {query result:\\ unsat} (bunsat.north);
-\draw[->] (b4.south east) -- node[above, align=center, fill=white, inner sep=1pt] {query result:\\ unknown} (bunk.north);
-
-\end{tikzpicture}
-
-\caption{BadHeading workflow for proving whether heading remains on the 15-degree grid and mapping query outcomes to verification status.}
-\label{fig:badheading_workflow}
-\end{figure}
-
-The new pipeline introduces a dedicated relation
-\texttt{BadHeading(\ldots)} at the invariant signature level and registers it in the fixedpoint context. Transition rules for turn commands can emit
-\texttt{BadHeading} consequences whenever \texttt{Not(heading\_on\_grid(next\_heading))}
-is reachable, see \autoref{fig:badheading_workflow} for the workflow.
-
-At API level, when checking is requested, the verifier queries
-\texttt{Exists(vars, BadHeading(state))}. The result semantics are:
-\texttt{sat -> heading\_grid\_safe = FAILED (overall UNKNOWN)},
-\texttt{unsat -> heading\_grid\_safe = PASSED (continue)},
-\texttt{unknown -> heading\_grid\_safe = UNKNOWN (overall UNKNOWN)}.
-
-This turns an implicit modeling assumption into an explicit proof obligation,
-improving interpretability of trig-sensitive verification outcomes.
-
-\subsection*{Implementation Details: Heading-grid Hints}
+\subsection*{Implementation Details: Heading-grid Hints}\label{subsec:heading_grid_hints}
 \noindent\textit{\small File: \texttt{CHC-Verification/safety\_properties.py}}
 
 Hints are parsed as a \texttt{StrEnum} with values
@@ -372,7 +373,7 @@ In \texttt{OptimizationLevel.BASIC}, if static analysis proves every turn is saf
 (\texttt{is\_all\_turn\_safe}), the heading-grid check short-circuits to PASSED,
 avoiding unnecessary solver effort.
 
-\subsection*{API Usage Guide}
+\subsection*{API Usage Guide}\label{subsec:api_usage_guide}
 
 The expected calling pattern is:
 

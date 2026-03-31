@@ -2,11 +2,7 @@ from init_fixed_point import *
 import sys
 from z3 import *
 from ChironAST import ChironAST
-from math import cos, sin, pi
-from fractions import Fraction
-from z3 import z3util
 from optimization_helpers import *
-from optimization_helpers import _MULT15_VALUES
 
 def cos_sin_exact_z3(h, i):
     cos_expr = RealVal(0)
@@ -435,6 +431,7 @@ def add_step_rules_to_fixed_point(ir, mode, param=None, optimization_level=Optim
         summarizable_by_init = {l[0]: l for l in summarizable}
         skip_indices = set()
         for l in summarizable:
+            # Skip all the instruction in the body of the loop as well as the condition, decrement and jump instructions
             skip_indices.update(range(l[0], l[6]))
     else:
         summarizable_by_init = {}
