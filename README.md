@@ -1,158 +1,224 @@
 # Chiron IR Verification Using Constrained Horn Clauses
-This repository contains the implementation of a verifier for Chiron IR using Constrained Horn Clauses (CHCs). The verifier is designed to check the safety properties of programs represented in Chiron IR by translating them into CHCs and using the Z3 SMT solver to verify their correctness.
+
+This repository contains a CHC-based safety verifier for Chiron turtle-language programs.
+The verifier translates Chiron IR into Horn clauses and uses Z3 Fixedpoint (SPACER)
+to prove or refute safety properties.
 
 ## Team Members
+
 | Name | Roll Number | GitHub Username |
-|------|-------------|-----------------|
+|---|---|---|
 | Aditi Khandelia | 220061 | [AditiKhandelia](https://github.com/AditiKhandelia) |
-| Arush Upadhyaya | 220213 | [A-Rush-R](https://github.com/A-Rush-R)
-| Kushagra Srivastava | 220573 | [whizdor](https://github.com/whizdor)
+| Arush Upadhyaya | 220213 | [A-Rush-R](https://github.com/A-Rush-R) |
+| Kushagra Srivastava | 220573 | [whizdor](https://github.com/whizdor) |
 
-## Project Overview
-The project implements a safety verifier for Chiron Turtle programs by translating Chiron IR into Constrained Horn Clauses (CHCs) and solving them with Z3 SPACER.
+## Milestone-2 Snapshot
 
-### What this verifier can do
-- Check whether user-provided properties are invariants over all reachable program states.
-- Report `PASSED`, `FAILED`, or `UNKNOWN` for each property.
-- Produce a counterexample model when a property fails.
-- Work with turtle state (`xcor`, `ycor`, `heading`, `pendown`), user variables, and loop counters from `repeat`.
-- Support four initialization modes:
+Compared to the milestone-1 submission (`0f99ade6d4aa2516f9e47e013ad06d29e8b8a2f7`),
+the verifier is now API-first and supports richer configuration:
 
-| Mode | What it verifies |
-|---|---|
-| `default` | Safety from a fixed concrete start state (all numeric values initialized to `0`, `pendown=False`) |
-| `universal` | Safety for all initial values of turtle coordinates/heading and user variables |
-| `specific` | Safety for a user-provided concrete initial variable assignment |
+- Programmatic API via `CHC_Verification(...)`
+- Structured return object with status, advice, build/solve times, and per-property outcomes
+- Modes: `default`, `specific`, `universal`
+- Property scopes: `all` reachable states or `terminating` states only
+- Heading-grid checks/hints for enforcing or assuming 15-degree turn alignment
+- Explicit timeout control per verification call
 
-### How verification is done
-1. Parse `.tl` source into linear Chiron IR (instruction + jump-offset form).
-2. Extract symbols: user variables and loop counters.
-3. Build mode-dependent invariant relation `Inv(...)` and state tuples in Z3.
-4. Add initial facts/rules based on selected mode.
-5. Translate each IR command into CHC transition rules (`Inv(s) -> Inv(s')`).
-6. For each property `P`, query reachability of violating states: `Exists(vars, Inv(state) and Not(P))`.
-7. Interpret solver result:
-   - `sat` => property fails (counterexample exists)
-   - `unsat` => property is proved invariant
-   - otherwise => unknown
+Current submission commit (milestone-2):
+`c88682f82df5d5f287c4460d8bb6d30d7d2c8a82`
 
+## Repository Structure
 
-## Project Structure 
-- `ChironFramework/`: Contains the implementation of the Chiron IR and the translation to CHCs.
-    - `ChironCore/CHC_Verification/`: Contains the code for the CHC verification process, including variable name detection, Z3 fixed point generation, rule translation, and safety property checking.
-- `README.md`: This file, providing an overview of the project and its structure.
+- `CHC-Verification/`
+  - `variable_name_detection_in_IR.py`: extracts user variables and loop counters from linear IR
+  - `z3_fixed_point.py`: builds mode-dependent invariant signature/state vectors
+  - `init_fixed_point.py`: initializes fixedpoint engine and mode-specific base rules
+  - `step_rules.py`: translates Chiron IR instructions to CHC transition rules
+  - `heading_grid.py`: heading lattice helper logic
+  - `safety_properties.py`: main API (`CHC_Verification`) and property checking
+- `Chiron-Framework/ChironCore/`
+  - Chiron parser/IR infrastructure consumed by the verifier (`irhandler`, AST builder, etc.)
 
-## Pipeline and Code Structure 
-1. **Variable Name Detection in Chiron IR**: 
-    - Code File : `Chiron-Framework/ChironCore/CHC_Verification/variable_name_detection_in_IR.py`
-        - Input : A Chiron IR Object.
-        - Output : Pretty prints the symbol table and the counter table for the variables in the Chiron IR. Returns the symbol table and counter table.
-        - ``getParseTree`` function is used to parse the input Turtle file and generate the parse tree.
-        - ``astGenPass`` function converts ANTLR parse tree into a flat list of (command, offset) used as linear IR.
-        - ``parse_variables_from_ir`` function extracts variable names from the linear IR and populates the symbol table and counter table.
-2. **Z3 Fixed Point Function Signature**:
-    - Code File : `Chiron-Framework/ChironCore/CHC_Verification/z3_fixed_point.py`
-        - Input : A Chiron IR Object.
-        - Output : A Z3 Fixed Point object with the appropriate function signatures for the CHC verification. Tuples for state and next_state.
-        - ``parse_variables_from_ir`` function is reused to get the symbol table and counter table for the variables in the Chiron IR.
-        - ``z3_fixed_point_invariant_generation`` function creates mode-aware function signatures for `default`, `universal`, `specific`.
-3. **Create Fixed Point Object and set Initial Conditions**:
-    - Code File : `Chiron-Framework/ChironCore/CHC_Verification/init_fixed_point.py`
-        - Input : A Chiron IR Object.
-        - Output : A Z3 Fixed Point object with the initial conditions set for the CHC verification.
-        - ``z3_fixed_point_invariant_generation`` function is used to set the signature for the state and next_state prediactes, as well as the ``Inv`` predicate.
-        - ``z3_fixed_point_object_with_start_state_set`` function initializes the Z3 Fixed Point object, registers the invariant relation, and adds mode-specific initial rules for `default`, `universal`, `specific`.
-4. **Translate Chiron IR to CHC Rules**:
-    - Code File : `Chiron-Framework/ChironCore/CHC_Verification/step_rules.py`
-        - Input : A Chiron IR Object, Z3 Fixed Point object, invariant relation, state and next_state tuples, symbol table and counter table.
-        - Output : CHC rules corresponding to the semantics of each instruction in the Chiron IR added to the Z3 Fixed Point object.
-        - ``cos_sin_bounds_z3`` function defines the constraints for the cosine and sine of the heading variable in the Z3 solver.
-        - ``normalize_heading`` function ensures that the heading variable is always within the range of \[0, 360\) degrees.
-        - ``chiron_expr_to_z3`` function recursively translates a Chiron expression into a Z3 expression, handling various types of expressions such as binary arithmetic operations, comparisons, and variable references.
-        - ``chiron_command_to_z3_rule`` function translates a Chiron command into one or more Z3 rules (for conditional commands) based on the semantics of the command and the structure of the Chiron IR.
-        - ``add_chiron_ir_to_fixed_point`` function iterates through the linear IR of the Chiron program, translates each instruction into Z3 rules using the previous functions, and adds those rules to the Z3 Fixed Point object. It also includes print statements to show the rules being added for debugging and verification purposes.
-5. **Check Safety Properties**:
-    - Code File : `Chiron-Framework/ChironCore/CHC_Verification/safety_properties.py`
-        - Input (CLI) : `python safety_properties.py <chiron_program_file> <number_of_properties> <mode> [params_dict_for_specific]`
-            - `<mode>` must be one of `default`, `universal`, `specific`.
-            - for `specific`, an additional params dictionary is required (example: `'{\":x\": 10, \"y\": 20}'`).
-        - Input (interactive) : for each property, user enters
-            - property name (string label),
-            - property boolean expression over available variables (`xcor`, `ycor`, `heading`, `pendown`, user vars, counters) using `And/Or/Not` and comparisons.
-        - Output : For each property, prints `PASSED` / `FAILED` / `UNKNOWN`; on failure prints a counterexample
-        - ``check_property`` queries reachability of violating states (`Inv(state) AND NOT(property)`), then classifies result as invariant proved (`unsat`) or violated (`sat`).
+## Verification Model
 
-## Usage
+The state tracked by the invariant relation includes:
 
-### Running the Verifier
+- program counter (`pc`)
+- turtle coordinates (`xcor`, `ycor`)
+- turtle heading (`heading`)
+- pen state (`pendown`)
+- user variables
+- internal repeat counters
 
-Run commands from `Chiron-Framework/ChironCore`:
+A property `P` is checked by querying reachability of violating states:
+`Exists(vars, Inv(state) and Not(P))`.
+
+- `sat` => property fails (`FAILED`)
+- `unsat` => property proved invariant (`PASSED`)
+- otherwise => solver could not conclude (`UNKNOWN`)
+
+## API Reference
+
+Primary entrypoint: `CHC-Verification/safety_properties.py`
+(`OptimizationLevel` is defined in `CHC-Verification/variable_name_detection_in_IR.py`)
+
+```python
+CHC_Verification(
+    file_name,
+    mode,
+    user_properties,
+    params=None,
+    property_scope="all",
+    hints=["check_heading_always_on_grid"],
+    timeout_ms=60_000,
+    optimization_level=OptimizationLevel.NONE,
+)
+```
+
+### Parameters
+
+- `file_name`: path to `.tl` program
+- `mode`: `default`, `specific`, or `universal`
+- `user_properties`: list of objects with fields:
+  - `name`: property label
+  - `expr`: property expression as string
+- `params`: required in `specific` mode, passed as a dictionary string
+  (example: `"{'start': 10, 'step': 5}"`)
+- `property_scope`:
+  - `"all"`: evaluate over all reachable states
+  - `"terminating"`: evaluate only at terminating states (`pc == terminal_pc`)
+- `hints`:
+  - `"check_heading_always_on_grid"`: verify heading stays on 15-degree lattice before property checks
+  - `"heading_on_grid_always"`: assume heading grid restriction directly
+- `timeout_ms`: solver timeout in milliseconds
+- `optimization_level`: optimization mode for CHC generation.
+  - `OptimizationLevel.NONE`: baseline encoding
+  - `OptimizationLevel.BASIC`: enable lightweight static simplifications
+
+### Return Value
+
+`CHC_Verification(...)` returns a `ReturnValue` object with fields:
+
+- `status`: overall `PASSED` / `FAILED` / `UNKNOWN`
+- `error`: `ReturnError.SUCCESS` / `ERROR` / `UNKNOWN`
+- `expr`: short status message
+- `advice`: guidance text
+- `heading_grid_safe`: `PASSED` / `FAILED` / `UNKNOWN`
+- `build_time`: fixedpoint construction time (seconds)
+- `solve_times`: list of per-property solve times (seconds)
+- `passing_properties`: list of `[name, invariant]`
+- `failing_properties`: list of `[name, counterexample]`
+- `unknown_properties`: list of property names with unknown verdict
+
+## Setup
+
+Use Python 3.11+ and install dependencies in a virtual environment.
 
 ```bash
 cd Chiron-Framework/ChironCore
-python CHC_Verification/safety_properties.py <path-to-turtle-file> <num-properties> <mode> [params]
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+python -m pip install antlr4-python3-runtime==4.13.2 networkx numpy z3-solver
 ```
 
-| Argument | Description |
-|---|---|
-| `<path-to-turtle-file>` | Path to a Chiron Turtle (`.tl`) source file |
-| `<num-properties>` | Number of safety properties to check interactively |
-| `<mode>` | One of `default`, `universal`, `specific` |
-| `[params]` | Required only for `specific`; dictionary of initial user-variable values |
+Environment activation should be done from `Chiron-Framework/ChironCore`
 
-For `specific` mode, pass a dictionary string as the 4th argument, for example:
+## Running Instructions (API Usage)
+
+1. Activate environment from `Chiron-Framework/ChironCore`.
+2. Switch to `CHC-Verification` to run verification commands.
+
 ```bash
-python CHC_Verification/safety_properties.py CHC_Verification/test_files/variable_arithmetic/assignment.tl 1 specific '{"a": 0, ":b": 10}'
+cd Chiron-Framework/ChironCore
+source .venv/bin/activate
+cd ../../CHC-Verification
 ```
 
-After startup, the verifier prompts for each property:
-1. Property name
-2. Property boolean expression
+### Example
 
-### Available State Variables in Property Expressions
+```python
+from safety_properties import CHC_Verification
+from variable_name_detection_in_IR import OptimizationLevel
 
-| Variable | Description |
-|---|---|
-| `xcor` | Turtle's current x-coordinate |
-| `ycor` | Turtle's current y-coordinate |
-| `heading` | Turtle's current heading in degrees |
-| `pendown` | Boolean - whether the pen is down |
-| `varname` | Any user variable declared in the program (`:varname` in source appears as `varname`) |
-| `__rep_counter_*` | Loop counters introduced for `repeat` constructs |
+class UserProperty:
+  def __init__(self, name, expr):
+    self.name = name
+    self.expr = expr
 
-Supported Z3 operators: `And(...)`, `Or(...)`, `Not(...)`, `>=`, `<=`, `==`, `!=`, `>`, `<`, `+`, `-`, `*`, `/`.
+result = CHC_Verification(
+  file_name="correctness_tests/programs/loop_accum.tl",
+  mode="default",
+  user_properties=[UserProperty("x_nonneg", "x >= 0")],
+  optimization_level=OptimizationLevel.BASIC,
+)
+print(result.status, result.expr)
+```
 
----
+### Short Specific Example
 
-### Examples
+```python
+result = CHC_Verification(
+  file_name="correctness_tests/programs/param_loop.tl",
+  mode="specific",
+  user_properties=[UserProperty("acc_nonneg", "acc >= 0")],
+  params="{':start': 0, ':step': 1}",
+  property_scope="all",
+)
+print(result.status)
+```
 
-#### Example 1 - Default mode
+### Short Universal + Terminating Example
+
+```python
+result = CHC_Verification(
+  file_name="correctness_tests/programs/u_clamp_to_zero.tl",
+  mode="universal",
+  user_properties=[UserProperty("z_nonneg_at_end", "z >= 0")],
+  property_scope="terminating",
+)
+print(result.status)
+```
+
+## Property Expression Language
+
+Property strings can reference:
+
+- turtle state: `xcor`, `ycor`, `heading`, `pendown`
+- user variables discovered from program
+- loop counters discovered from `repeat`
+- boolean combinators: `And(...)`, `Or(...)`, `Not(...)`
+- arithmetic/comparison operators supported by Z3 expressions
+
+Examples:
+
+- `"And(xcor >= 0, xcor <= 50)"`
+- `"Not(pendown)"`
+- `"Or(heading == 0, heading == 90, heading == 180, heading == 270)"`
+- `"acc >= 0"`
+
+## Notes and Current Limitations
+
+- A program that might violate the condition `heading % 15 == 0` at any point during execution may throw `UNKNOWN`
+- Some complex cases can return `UNKNOWN` under time limits, or may simply timeout
+- If heading-grid safety fails under strict semantics, the API returns `UNKNOWN` and skips subsequent property checks
+
+## Test Information
+
+Test suite details are documented separately in:
+`CHC-Verification/correctness_tests/README.md`
+
+Quick commands:
+
 ```bash
-python CHC_Verification/safety_properties.py ../../test_files/forward.tl 2 default
+# Correctness suite
+cd CHC-Verification/correctness_tests
+python -m pytest -q
+
+# Performance suite
+cd CHC-Verification/performance_tests
+python -m pytest -q
 ```
 
-#### Example 2 - Universal mode
-```bash
-python CHC_Verification/safety_properties.py ../../test_files/nested_loops.tl 1 universal
-```
-#### Example 3 - Specific mode
-```bash
-python CHC_Verification/safety_properties.py CHC_Verification/test_files/variable_arithmetic/assignment.tl 1 specific '{"a": 0}'
-```
-
-```
-Enter name for property 1: ycor is zero
-Enter the boolean expression for property 'ycor is zero': ycor == 0
-```
-
-Expected output: property **FAILED** - the turtle moves forward, so `ycor` is not always 0. A counterexample state is printed.
-
-## Tests
-
-- Usage:
-```bash
-cd Chiron-Framework/ChironCore/CHC_Verfication/tests
-python run_all.py
-```
-
-- See the tests [`README.md`](./Chiron-Framework/ChironCore/CHC_Verification/tests/README.md) for the test cases and description
+Note: `CHC-Verification/performance_tests/pytest.ini` uses `-n auto`, so install
+`pytest-xdist` if parallel execution is unavailable by default.

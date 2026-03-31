@@ -1,0 +1,5 @@
+% !TEX root = main.tex
+\section*{Project Overview}
+Program verification provides mathematical guarantees that software behaves correctly, unlike testing, which can find bugs but never prove their absence. While the Chiron framework offers support for dynamic analysis techniques such as fuzzing, symbolic execution, and spectrum-based fault localization, it currently lacks the capability to \textit{prove} that a program satisfies a given specification for \textit{all} possible inputs.
+
+This project bridges the gap between testing and verification in Chiron by implementing a PDR-based safety verification engine. We target properties natural to turtle graphics programs, such as spatial bounds on the turtle's position and invariants over program variables.

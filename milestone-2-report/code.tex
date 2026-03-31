@@ -1,0 +1,36 @@
+
+\section*{Source Code}
+
+The complete implementation is hosted at:
+\url{https://github.com/chiron-verification/milestone-2}
+
+\begin{itemize}[leftmargin=1.5em]
+	\item \textbf{Milestone-1 baseline commit:}
+	\texttt{0f99ade6d4aa2516f9e47e013ad06d29e8b8a2f7}
+	\item \textbf{Milestone-2 submission commit:}
+	\texttt{<TBD>}
+\end{itemize}
+
+\noindent
+Core source files and responsibilities:
+\begin{itemize}[leftmargin=1.5em]
+	\item \texttt{safety\_properties.py}: Main verification API; parses user properties, applies checks/hints, and reports \texttt{PASSED/FAILED/UNKNOWN} with timing, and now refactored from an interactive CLI to callable \texttt{CHC\_Verification(\ldots)} with structured \texttt{ReturnValue}, timeout handling, property-scope control, and heading-grid pre-check/hint orchestration.
+	\item \texttt{step\_rules.py}: Encodes IR instructions into CHC transition rules used by the fixedpoint engine, with replaced trig bucket bounds with exact 15-degree trig encoding, introduced \texttt{BadHeading} rule generation, and added optimization-aware loop summarization and turn-safety shortcuts.
+	\item \texttt{init\_fixed\_point.py}: Initializes solver state and base relations for default, specific, and universal modes, and now registers \texttt{BadHeading}, propagates \texttt{optimization\_level}, constrains universal initialization to heading-grid and integer user variables
+	\item \texttt{z3\_fixed\_point.py}: Defines invariant/state-vector relations and mode-aware predicate structure, and now adds \texttt{optimization\_level} plumbing and introduces the dedicated \texttt{BadHeading} relation in the same state signature as \texttt{Inv}.
+	\item \texttt{variable\_name\_detection\_in\_IR.py}: Extracts variables from IR for building constraints and queries, and now introduces the shared \texttt{OptimizationLevel} enum and updates parser signatures/import path setup to align with the standalone \texttt{CHC-Verification} package layout.
+	\item \texttt{heading\_grid.py}: Encodes heading-grid checks to handle 15-degree alignment assumptions explicitly, and now added as a dedicated helper module exposing \texttt{heading\_on\_grid(h)} for reuse across initialization, transition encoding, and API-level assumptions.
+	\item \texttt{optimization\_helpers.py}: Provides static-analysis helpers for optimization decisions and loop simplification metadata, introduced to implement turn-safety dataflow, repeat-loop pattern detection, and summarizability checks used by \texttt{OptimizationLevel.BASIC}.
+\end{itemize}
+
+\noindent
+The correctness test suite (\texttt{correctness\_tests/}) has substantially expanded across
+\texttt{test\_default.py}, \texttt{test\_specific.py}, and
+\texttt{test\_universal.py}, along with many new \texttt{.tl} fixtures and shared
+helpers to improve coverage of arithmetic, control-flow, and heading-related
+properties.
+
+In addition, a dedicated performance testing setup (\texttt{performance\_tests/}) is added with mode-wise test
+runners, benchmark fixtures, and reusable harness/configuration files to measure
+solver behavior on deep nesting, wide-state, branch-heavy, and high-iteration
+workloads.

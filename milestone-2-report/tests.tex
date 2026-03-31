@@ -1,0 +1,35 @@
+\section*{Tests}
+\label{sec:tests}
+
+\subsection*{Correctness Tests}
+The primary evaluation artifacts for this milestone are the automated test
+modules under \texttt{CHC-Verification/correctness\_tests/}, the shared helper framework,
+and the \texttt{.tl} fixture-program corpus.
+
+\subsubsection*{Test files used for evaluation}
+
+\begin{longtable}{p{0.28\textwidth} p{0.66\textwidth}}
+\toprule
+\textbf{File} & \textbf{Role in evaluation} \\
+\midrule
+\texttt{tests/test\_default.py} & Validates safety checking from the concrete default start state. Covers arithmetic, geometry, pen-state, directional, heading-grid, trig-dependent, and advanced nested-loop programs. \\
+\texttt{tests/test\_specific.py} & Validates parameterized initialization semantics. Focuses on boundary-sensitive properties where outcomes depend on user-supplied input dictionaries. \\
+\texttt{tests/test\_universal.py} & Validates unconstrained-initial-state reasoning, API error handling, terminating-only checks, and relational properties over symbolic inputs. \\
+\texttt{tests/helpers.py} & Shared harness providing fixedpoint construction, context generation, API wrappers, property assertions, and output suppression for deterministic test behavior. \\
+\texttt{tests/README.md} & Human-readable documentation of suite layout, categories, and execution workflow. \\
+\bottomrule
+\end{longtable}
+
+\subsubsection*{Coverage snapshot}
+
+\begin{itemize}[leftmargin=1.5em]
+	\item Total automated test cases: \textbf{202}
+	\item Fixture programs in \texttt{tests/programs/}: \textbf{59} \texttt{.tl} files
+	\item Explicitly skipped tests: \textbf{4} (timeout-marked trig/complex-heading cases)
+\end{itemize}
+
+\subsubsection*{Representative fixture-program families}
+
+\subsubsection*{How to run}
+
+\subsection*{Performance Tests}
