@@ -217,7 +217,7 @@ class PerformanceTestCase(unittest.TestCase):
     def assert_and_time(self, name: str, expr: str, expected_status: str,
                         max_build_s: float = None, max_solve_s: float = None):
         """
-        Run verification under all three optimization levels × two hint modes.
+        Run verification under all three optimization levels * two hint modes.
 
         For each of the 6 configurations:
           - verdict = raw solver output (PASSED / FAILED / UNKNOWN)

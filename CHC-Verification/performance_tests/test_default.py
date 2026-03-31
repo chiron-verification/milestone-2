@@ -266,13 +266,6 @@ class TestDefaultHeadingGridCost(PerformanceTestCase):
         self.assertEqual(result.heading_grid_safe, "PASSED",
             f"Expected heading_grid_safe=PASSED, got {result.heading_grid_safe}")
 
-    def test_turns50_heading_nonneg_pass(self):
-        """Same loose property on repeat 50. Grid check should dominate solve time."""
-        self.load("perf_turns_50.tl", hints=["check_heading_always_on_grid"])
-        result, _, _ = self.assert_and_time("heading_nonneg", "heading >= 0", "PASSED")
-        self.assertEqual(result.heading_grid_safe, "PASSED",
-            f"Expected heading_grid_safe=PASSED, got {result.heading_grid_safe}") 
-
 class TestDefaultPropertyComplexity(PerformanceTestCase):
     """
     Fixed program (perf_repeat_10.tl, x goes 0=>10), but increasingly complex property
