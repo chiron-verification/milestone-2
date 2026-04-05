@@ -182,7 +182,7 @@ class TestSpecificTwoParams(ChironTestCase):
 
 class TestSpecificCountdown(ChironTestCase):
     """param_countdown.tl: counter counts down from :n over 5 steps.
-    counter >= 0 holds iff n >= 5 — clean boundary driven purely by the param."""
+    counter >= 0 holds iff n >= 5 - clean boundary driven purely by the param."""
 
     MODE = "specific"
 
@@ -219,7 +219,7 @@ class TestSpecificCountdown(ChironTestCase):
 
 class TestSpecificAccumulate(ChironTestCase):
     """param_accumulate.tl: total = base, base+inc, base+2*inc, base+3*inc.
-    Outcome depends on the *combination* of two params — neither alone is sufficient."""
+    Outcome depends on the *combination* of two params - neither alone is sufficient."""
 
     MODE = "specific"
 
@@ -234,7 +234,7 @@ class TestSpecificAccumulate(ChironTestCase):
         self.assert_property_fail("total_nonneg", "total >= 0")
 
     def test_base_offsets_neg_inc_pass(self):
-        """base=3, inc=-1: total=3->2->1->0. Hits 0 exactly — boundary case. PASS."""
+        """base=3, inc=-1: total=3->2->1->0. Hits 0 exactly - boundary case. PASS."""
         self.load("param_accumulate.tl", params={"base": 3, "inc": -1})
         self.assert_property_pass("total_nonneg", "total >= 0")
 
@@ -298,7 +298,7 @@ class TestSpecificNestedCond(ChironTestCase):
 
 class TestSpecificLoopMove(ChironTestCase):
     """param_loop_move.tl: x = start, then x += step and goto(x, 0) for 3 iters.
-    Combines loop arithmetic with geometric state — xcor tracks x exactly."""
+    Combines loop arithmetic with geometric state - xcor tracks x exactly."""
 
     MODE = "specific"
 
@@ -328,7 +328,7 @@ class TestSpecificLoopMove(ChironTestCase):
         self.assert_property_pass("xcor_small_step", "xcor <= 30")
 
     def test_x_and_xcor_agree_pass(self):
-        """xcor mirrors x throughout — both bounded by start + 3*step."""
+        """xcor mirrors x throughout - both bounded by start + 3*step."""
         self.load("param_loop_move.tl", params={"start": 0, "step": 10})
         self.assert_property_pass("both_bounded", "And(x <= 30, xcor <= 30)")
 
@@ -350,7 +350,7 @@ class TestSpecificLoopMove(ChironTestCase):
 
 class TestSpecificPenCond(ChironTestCase):
     """param_pen_cond.tl: pen goes down only if :value > :threshold.
-    Tests param-driven pen behaviour — pen state is a function of two params."""
+    Tests param-driven pen behaviour - pen state is a function of two params."""
 
     MODE = "specific"
 
@@ -393,7 +393,7 @@ class TestSpecificPenCond(ChironTestCase):
 
 class TestSpecificChain(ChironTestCase):
     """param_chain.tl: a=seed, b=a+1, c=a+b, d=b+c.
-    d = 3*seed + 2 — a closed-form result derived through a chain of dependent assignments.
+    d = 3*seed + 2 - a closed-form result derived through a chain of dependent assignments.
     The solver must track the chain to verify d <= 20, with boundary at seed=6."""
 
     MODE = "specific"

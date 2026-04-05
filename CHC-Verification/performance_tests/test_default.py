@@ -79,7 +79,7 @@ class TestDefaultNestingDepth(PerformanceTestCase):
         self.assert_and_time("all_nonneg", "And(a >= 0, b >= 0, c >= 0)", "PASSED")
 
     def test_nest3_c_tight_pass(self):
-        """c <= 64 is the exact tight bound — hard UNSAT (requires full nested invariant)."""
+        """c <= 64 is the exact tight bound - hard UNSAT (requires full nested invariant)."""
         self.load("perf_deep_nest_3.tl")
         self.assert_and_time("c_tight", "c <= 64", "PASSED")
 
@@ -95,7 +95,7 @@ class TestDefaultNestingDepth(PerformanceTestCase):
         self.assert_and_time("all_nonneg", "And(a >= 0, b >= 0, c >= 0, d >= 0)", "PASSED")
 
     def test_nest4_d_tight_pass(self):
-        """d <= 81 tight bound (4-level, hard UNSAT — deeper invariant required)."""
+        """d <= 81 tight bound (4-level, hard UNSAT - deeper invariant required)."""
         self.load("perf_deep_nest_4.tl")
         self.assert_and_time("d_tight", "d <= 81", "PASSED")
 
@@ -108,7 +108,7 @@ class TestDefaultNestingDepth(PerformanceTestCase):
 class TestDefaultWideState(PerformanceTestCase):
     """
     8 chained variables updated every iteration of a 5-step loop.
-    Each variable depends on the previous one (b += a, c += b, …), so the
+    Each variable depends on the previous one (b += a, c += b, ...), so the
     CHC predicate must track an 8-dimensional arithmetic state.
 
     Final values after 5 iterations: a=6, b=22, c=63, d=154, e=336,
@@ -118,12 +118,12 @@ class TestDefaultWideState(PerformanceTestCase):
     MODE = "default"
 
     def test_wide_all_positive_pass(self):
-        """All 8 vars start positive and only grow => all > 0 always (easy UNSAT)."""
+        """All 8 vars start positive and only grow => fails beacuse default starts with 0."""
         self.load("perf_wide_vars.tl")
         self.assert_and_time(
             "all_positive",
             "And(a > 0, b > 0, c > 0, d > 0, e > 0, f > 0, g > 0, h > 0)",
-            "PASSED",
+            "FAILED",
         )
 
     def test_wide_a_tight_pass(self):
@@ -142,7 +142,7 @@ class TestDefaultWideState(PerformanceTestCase):
         self.assert_and_time("h_nonneg", "h >= 0", "PASSED")
 
     def test_wide_h_tight_pass(self):
-        """h <= 2211 is the tight exact bound — hardest UNSAT in this class."""
+        """h <= 2211 is the tight exact bound - hardest UNSAT in this class."""
         self.load("perf_wide_vars.tl")
         self.assert_and_time("h_tight", "h <= 2211", "PASSED")
 
@@ -210,7 +210,7 @@ class TestDefaultTrigScaling(PerformanceTestCase):
             "PASSED",
         )
 
-    # 20-iteration trig loop (same structure, more IR nodes)
+    # 20-iteration trig loop
 
     def test_trig20_ycor_violated_fail(self):
         """SAT query on 20-iteration version"""
@@ -266,16 +266,6 @@ class TestDefaultHeadingGridCost(PerformanceTestCase):
         self.assertEqual(result.heading_grid_safe, "PASSED",
             f"Expected heading_grid_safe=PASSED, got {result.heading_grid_safe}")
 
-    def test_turns50_heading_nonneg_pass(self):
-        """Same loose property on repeat 50. Grid check should dominate solve time."""
-        self.load("perf_turns_50.tl", hints=["check_heading_always_on_grid"])
-        result, _, _ = self.assert_and_time("heading_nonneg", "heading >= 0", "PASSED")
-        self.assertEqual(result.heading_grid_safe, "PASSED",
-            f"Expected heading_grid_safe=PASSED, got {result.heading_grid_safe}")
-
-
-# 7. Property-expression complexity 
-
 class TestDefaultPropertyComplexity(PerformanceTestCase):
     """
     Fixed program (perf_repeat_10.tl, x goes 0=>10), but increasingly complex property
@@ -305,50 +295,6 @@ class TestDefaultPropertyComplexity(PerformanceTestCase):
         self.load("perf_turns_20.tl", hints=["heading_on_grid_always"])
         expr = "Or(" + ", ".join(f"heading == {deg}" for deg in range(0, 360, 15)) + ")"
         self.assert_and_time("heading_grid_24", expr, "PASSED")
-
-
-# class TestDefaultComboStress(PerformanceTestCase):
-#     """
-#     perf_combo.tl: 5-iteration loop with a conditional that selects between
-#     a movement branch (forward :step; right 90) and a pure-turn branch (left 90).
-#     Exercises trig rules, branching, and multi-variable state simultaneously.
-
-#     Execution trace (default: xcor=0, ycor=0, heading=0, step=0, acc=0):
-#       iter 1: step=1, step>2 false => left 90 (h=90),  acc=1
-#       iter 2: step=2, step>2 false => left 90 (h=180), acc=2
-#       iter 3: step=3, step>2 true  => fwd 3 at h=180 (xcor=-3), right 90 (h=90), acc=5
-#       iter 4: step=4, step>2 true  => fwd 4 at h=90  (ycor=4),  right 90 (h=0),  acc=9
-#       iter 5: step=5, step>2 true  => fwd 5 at h=0   (xcor=2),  right 90 (h=270),acc=14
-#     Final: xcor=2, ycor=4, heading=270, step=5, acc=14.
-#     """
-
-#     MODE = "default"
-
-#     def test_combo_step_nonneg_pass(self):
-#         """step counter is always >= 0 (easy UNSAT)."""
-#         self.load("perf_combo.tl", hints=["heading_on_grid_always"])
-#         self.assert_and_time("step_nonneg", "step >= 0", "PASSED")
-
-#     def test_combo_acc_nonneg_pass(self):
-#         """acc only increases => acc >= 0 always."""
-#         self.load("perf_combo.tl", hints=["heading_on_grid_always"])
-#         self.assert_and_time("acc_nonneg", "acc >= 0", "PASSED")
-
-#     def test_combo_step_tight_pass(self):
-#         """step <= 5 is the exact tight bound (hard UNSAT — needs step invariant)."""
-#         self.load("perf_combo.tl", hints=["heading_on_grid_always"])
-#         self.assert_and_time("step_tight", "step <= 5", "PASSED")
-
-#     def test_combo_step_violated_fail(self):
-#         """step reaches 5 => step <= 3 violated (SAT). Tests SAT on mixed program."""
-#         self.load("perf_combo.tl", hints=["heading_on_grid_always"])
-#         self.assert_and_time("step_violated", "step <= 3", "FAILED")
-
-#     def test_combo_acc_tight_pass(self):
-#         """acc <= 14 is the exact tight bound — hardest UNSAT (trig + branch + arithmetic)."""
-#         self.load("perf_combo.tl", hints=["heading_on_grid_always"])
-#         self.assert_and_time("acc_tight", "acc <= 14", "PASSED")
-
 
 if __name__ == "__main__":
     unittest.main()

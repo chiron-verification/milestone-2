@@ -1,0 +1,10 @@
+repeat 5 [
+  :a = :a + 1
+  :b = :b + :a
+  :c = :c + :b
+  :d = :d + :c
+  :e = :e + :d
+  :f = :f + :e
+  :g = :g + :f
+  :h = :h + :g
+]
