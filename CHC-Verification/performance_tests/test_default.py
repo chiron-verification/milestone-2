@@ -244,7 +244,7 @@ class TestDefaultHeadingGridCost(PerformanceTestCase):
     def test_turns20_heading_binary_pass(self):
         """Heading visits only {0, 345} => Or(heading==0, heading==345) is invariant."""
         self.load("perf_turns_20.tl", hints=["check_heading_always_on_grid"])
-        result, _, _ = self.assert_and_time(
+        result, _, _, _ = self.assert_and_time(
             "heading_binary", "Or(heading == 0, heading == 345)", "PASSED"
         )
         self.assertEqual(result.heading_grid_safe, "PASSED",
@@ -253,7 +253,7 @@ class TestDefaultHeadingGridCost(PerformanceTestCase):
     def test_turns50_heading_binary_pass(self):
         """Invariant on repeat 50"""
         self.load("perf_turns_50.tl", hints=["check_heading_always_on_grid"])
-        result, _, _ = self.assert_and_time(
+        result, _, _, _ = self.assert_and_time(
             "heading_binary", "Or(heading == 0, heading == 345)", "PASSED"
         )
         self.assertEqual(result.heading_grid_safe, "PASSED",
@@ -262,7 +262,7 @@ class TestDefaultHeadingGridCost(PerformanceTestCase):
     def test_turns20_heading_nonneg_pass(self):
         """heading >= 0. Isolates heading-grid check cost."""
         self.load("perf_turns_20.tl", hints=["check_heading_always_on_grid"])
-        result, _, _ = self.assert_and_time("heading_nonneg", "heading >= 0", "PASSED")
+        result, _, _, _ = self.assert_and_time("heading_nonneg", "heading >= 0", "PASSED")
         self.assertEqual(result.heading_grid_safe, "PASSED",
             f"Expected heading_grid_safe=PASSED, got {result.heading_grid_safe}")
 

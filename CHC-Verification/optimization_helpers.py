@@ -9,6 +9,9 @@ _MULT15_VALUES = {
     for deg in range(0, 360, 15)
 }
 
+# Cap loop unrolling during summarization to avoid excessive rule generation.
+MAX_SUMMARIZE_ITERATIONS = 50
+
 def linearized_trig_move(x, y, h, delta, forward=True):
     delta_real = ToReal(delta) if delta.sort() == IntSort() else delta
     x_expr = x
@@ -208,6 +211,8 @@ def find_repeat_loops(ir):
 def is_summarizable_loop(ir, loop_desc):
     (init_idx, cond_idx, body_start, body_end, dec_idx, back_idx, exit_idx, counter_name, loop_count) = loop_desc
     if not isinstance(loop_count, int) or loop_count <= 0:
+        return False
+    if loop_count > MAX_SUMMARIZE_ITERATIONS:
         return False
     for idx in range(body_start, body_end + 1):
         instr, jump = ir[idx]

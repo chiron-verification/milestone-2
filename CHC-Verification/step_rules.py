@@ -1,6 +1,7 @@
 from init_fixed_point import *
 import sys
 from z3 import *
+from z3 import z3util
 from ChironAST import ChironAST
 from optimization_helpers import *
 from optimization_helpers import _MULT15_VALUES
@@ -139,6 +140,9 @@ def apply_instr_state_only(instr, fp, Inv, state, next_state, symbol_table, coun
 
 def summarize_loop_effect(ir, loop_desc, fp, Inv, state, next_state, symbol_table, counter_table, turn_safe_map):
     (init_idx, cond_idx, body_start, body_end, dec_idx, back_idx, exit_idx, counter_name, loop_count) = loop_desc
+
+    if loop_count > MAX_SUMMARIZE_ITERATIONS:
+        return None, []
 
     bad_rules = []
     current_state = state
@@ -444,20 +448,37 @@ def add_step_rules_to_fixed_point(ir, mode, param=None, optimization_level=Optim
             loop_desc = summarizable_by_init[i]
             (init_idx, cond_idx, body_start, body_end, dec_idx, back_idx, exit_idx, counter_name, loop_count) = loop_desc
             current_state_no_pc, bad_rules = summarize_loop_effect(ir, loop_desc, fp, Inv, state, next_state, symbol_table, counter_table, turn_safe_map)
-            current_state = (IntVal(i), *state[1:])
-            next_state_tuple = (IntVal(exit_idx), *current_state_no_pc)
-            rule = Implies(Inv(*current_state), Inv(*next_state_tuple))
-            rule_vars = z3util.get_vars(rule)
-            fp.rule(ForAll(rule_vars, rule))
-            print(f"Added summarized rule for loop starting at line {i}: {rule}")
-            for bad_cond, bad_state_no_pc, bad_pc in bad_rules:
-                bad_rule_full = Implies(
-                    And(Inv(*current_state), bad_cond),
-                    BadHeading(IntVal(bad_pc), *bad_state_no_pc)
-                )
-                bad_rule_vars = z3util.get_vars(bad_rule_full)
-                fp.rule(ForAll(bad_rule_vars, bad_rule_full))
-                print(f"Added summarized BadHeading rule for loop starting at line {i}: {bad_rule_full}")
+            if current_state_no_pc is None:
+                # Summarization skipped (too many iterations). Fall back to normal rules.
+                instr = stmt[0]
+                jump_target = stmt[1]
+                rule_true, rule_false, bad_rule = chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, BadHeading, state, next_state, symbol_table, counter_table, optimization_level, turn_safe_map)
+                rule_true_vars = z3util.get_vars(rule_true)
+                fp.rule(ForAll(rule_true_vars, rule_true))
+                print(f"Added rule for instruction at line {i}: {rule_true}")
+                if rule_false is not None:
+                    rule_false_vars = z3util.get_vars(rule_false)
+                    fp.rule(ForAll(rule_false_vars, rule_false))
+                    print(f"Added rule for instruction at line {i} (false branch): {rule_false}")
+                if bad_rule is not None:
+                    bad_rule_vars = z3util.get_vars(bad_rule)
+                    fp.rule(ForAll(bad_rule_vars, bad_rule))
+                    print(f"Added BadHeading rule for instruction at line {i}: {bad_rule}")
+            else:
+                current_state = (IntVal(i), *state[1:])
+                next_state_tuple = (IntVal(exit_idx), *current_state_no_pc)
+                rule = Implies(Inv(*current_state), Inv(*next_state_tuple))
+                rule_vars = z3util.get_vars(rule)
+                fp.rule(ForAll(rule_vars, rule))
+                print(f"Added summarized rule for loop starting at line {i}: {rule}")
+                for bad_cond, bad_state_no_pc, bad_pc in bad_rules:
+                    bad_rule_full = Implies(
+                        And(Inv(*current_state), bad_cond),
+                        BadHeading(IntVal(bad_pc), *bad_state_no_pc)
+                    )
+                    bad_rule_vars = z3util.get_vars(bad_rule_full)
+                    fp.rule(ForAll(bad_rule_vars, bad_rule_full))
+                    print(f"Added summarized BadHeading rule for loop starting at line {i}: {bad_rule_full}")
 
         elif i in skip_indices:
             continue
