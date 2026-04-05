@@ -1,0 +1,130 @@
+\heading{Overview of the pipeline}
+The pipeline takes a source turtle program and a set of safety properties as input. Using Chiron’s API, the program is translated to Chiron-IR and its relevant user and state variables are extracted. The program semantics are then encoded as Constrained Horn Clauses (CHCs), and combined with the properties expressed in CHC form. This CHC system is given to \texttt{Z3}'s \texttt{SPACER} engine, which checks whether an \textbf{unsafe} state is reachable. A \texttt{sat} result yields a concrete counterexample, while \texttt{unsat} proves that the property holds.
+
+\heading{Features}
+
+%% EQUIVALENT TABLE BELOW
+% \begin{itemize}
+%     \item 
+%     Our verifier supports the following modes:
+%     \begin{enumerate}
+%         \item \textbf{universal:} The property is checked over all possible values of the user input variables, with the turtle starting starting at origin with \texttt{pendown=True}
+%         \item \textbf{default:} The property is checked over all the user variables initialized to 0, with the turtle starting at origin with \texttt{pendown=False}
+%         \item \textbf{specific:} Similar to default mode except that user can explicitly initialize some or all of user variables to their values of choice.
+%     \end{enumerate}
+
+%     \item 
+%     Additionally, the verifier supports two property scopes, indepedent of the mode:
+%     \begin{enumerate}
+%         \item \textbf{all}: The safety guarantee of the property is understood as to hold at every point in the program
+%         \item \textbf{terminating}: The safety guarantee of the property is understood as to hold only at the point of the termination of the program
+%     \end{enumerate}
+% \end{itemize}
+
+\begin{table}
+  \centering
+  \begin{tabular}{l l p{13cm}}
+    \toprule
+    \textbf{Category} & \textbf{Option} & \textbf{Description} \\
+    \midrule
+    \multirow{3}{*}[-2.0em]{Mode} & \textbf{universal} & Checks the property over all possible values of the user input variables, with the turtle initially at the origin and \texttt{pendown=True}. \\
+    & \textbf{default} & Checks the property with all user variables initialized to 0, with the turtle initially at the origin and \texttt{pendown=False}. \\
+    & \textbf{specific} & Similar to \textbf{default}, except that the user may explicitly assign values to some or all user input variables. \\
+    \midrule
+    \multirow{2}{*}[-1em]{Property Scope} & \textbf{all} & Interprets the safety guarantee as required to hold at every point during program execution. \\
+    & \textbf{terminating} & Interprets the safety guarantee as required to hold only at program termination. \\
+    \bottomrule
+  \end{tabular}
+  \caption{Verification modes and property scopes supported by the verifier.}
+\end{table}
+
+
+% \begin{figure}[h] 
+% \centering
+% \begin{tikzpicture}[>=stealth, line width=1pt, font=\footnotesize]
+% \tikzset{
+% 	stage/.style={draw, rounded corners=2.5mm, align=left, text width=4.2cm, minimum height=2.05cm, fill=blue!9},
+% 	heavy/.style={draw, rounded corners=2.5mm, align=left, text width=4.9cm, minimum height=2.55cm, fill=blue!9},
+% 	gate/.style={draw, rounded corners=2.5mm, align=left, text width=4.0cm, minimum height=2.25cm, fill=blue!9}
+% }
+
+% % Two-column layout (snake flow)
+% \node[stage] (n1) at (0,0)
+% {\textbf{1. API Entry}\\
+% \texttt{CHC\_Verification(\ldots)}\\
+% Collect call arguments\\
+% \texttt{safety\_properties.py::\\CHC\_Verification}};
+
+% \node[stage] (n2) at (12.0,0)
+% {\textbf{2. Validation}\\
+% Check mode, scope, hints,\\
+% and specific-mode params\\
+% \texttt{safety\_properties.py::\\CHC\_Verification}};
+
+% \node[stage] (n3) at (12.0,-5.0)
+% {\textbf{3. Parse Program}\\
+% Build IR from source\\
+% Compute \texttt{terminal\_pc}\\
+% \texttt{irhandler.py::\\getParseTree}};
+
+% \node[heavy] (n4) at (0,-5.0)
+% {\textbf{4. CHC Builder}\\
+% Construct \texttt{Inv}/\texttt{BadHeading},\\
+% state vectors, initial facts,\\
+% and transition rules\\
+% \texttt{step\_rules.py::\\add\_step\_rules\_to\_fixed\_point}};
+
+% \node[heavy] (n5) at (0,-10.0)
+% {\textbf{5. Optimization}\\
+% \texttt{BASIC}: turn safety, loop\\
+% summarization, exact trig\\
+% \texttt{NONE}: baseline encoding\\
+% \texttt{optimization\_helpers.py::\\turn\_safe}};
+
+% \node[gate] (n6) at (12.0,-10.0)
+% {\textbf{6. Heading Grid Gate}\\
+% Apply hint policy or\\
+% query \texttt{BadHeading}\\
+% \texttt{safety\_properties.py::\\CHC\_Verification}};
+
+% \node[gate] (n7) at (12.0,-15.0)
+% {\textbf{7. Scope Gate}\\
+% All states or only\\
+% terminating states\\
+% \texttt{safety\_properties.py::\\CHC\_Verification}};
+
+% \node[heavy] (n8) at (0,-15.0)
+% {\textbf{8. Property Loop}\\
+% Evaluate each property,\\
+% query solver, collect\\
+% PASS/FAIL/UNKNOWN + time\\
+% \texttt{safety\_properties.py::\\check\_property}};
+
+% \node[stage] (n9) at (0,-20.0)
+% {\textbf{9. Return Object}\\
+% Assemble \texttt{ReturnValue}\\
+% with all outcomes\\
+% \texttt{safety\_properties.py::\\ReturnValue}};
+
+% % Arrows with data flow labels
+% \draw[->] (n1.east) -- node[above, align=center, fill=white, inner sep=1pt] {file, mode,\\properties, options} (n2.west);
+% \draw[->] (n2.south) -- node[right, align=center, fill=white, inner sep=1pt] {validated\\config} (n3.north);
+% \draw[->] (n3.west) -- node[above, align=center, fill=white, inner sep=1pt] {IR +\\\texttt{terminal\_pc}} (n4.east);
+% \draw[->] (n4.south) -- node[left, align=center, fill=white, inner sep=1pt] {\texttt{fp}, \texttt{Inv},\\\texttt{BadHeading}, tables} (n5.north);
+% \draw[->] (n5.east) -- node[above, align=center, fill=white, inner sep=1pt] {optimized/base CHCs +\\\texttt{turn\_safe\_map}} (n6.west);
+% \draw[->] (n6.south) -- node[right, align=center, fill=white, inner sep=1pt] {heading assumptions\\+ grid status} (n7.north);
+% \draw[->] (n7.west) -- node[above, align=center, fill=white, inner sep=1pt] {assumptions (+ optional\\\texttt{term\_guard})} (n8.east);
+% \draw[->] (n8.south) -- node[left, align=center, fill=white, inner sep=1pt] {property outcomes\\+ solve times} (n9.north);
+
+% % Early-exit note
+% \node[draw, dashed, rounded corners=2mm, align=left, fill=gray!10, text width=5.0cm, minimum height=1.4cm, minimum width=5.0cm] (e1) at (12.0,-20.0)
+% {Early exit:\\
+% invalid input, non-grid heading,\\
+% termination unknown, timeout\\
+% \texttt{safety\_properties.py::\\CHC\_Verification}};
+% \draw[->, dashed] (n6.east) -- ++(1.4,0) -- ++(0,-6.2) -- (e1.east);
+
+% \end{tikzpicture}
+% \caption{Main verification pipeline showing stage responsibilities and data artifacts flowing through parsing, CHC construction, heading/scope controls, and final result aggregation:}
+% \label{fig:main_pipeline_flow}
+% \end{figure}
