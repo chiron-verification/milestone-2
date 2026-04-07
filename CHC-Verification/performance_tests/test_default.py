@@ -79,7 +79,7 @@ class TestDefaultNestingDepth(PerformanceTestCase):
         self.assert_and_time("all_nonneg", "And(a >= 0, b >= 0, c >= 0)", "PASSED")
 
     def test_nest3_c_tight_pass(self):
-        """c <= 64 is the exact tight bound — hard UNSAT (requires full nested invariant)."""
+        """c <= 64 is the exact tight bound - hard UNSAT (requires full nested invariant)."""
         self.load("perf_deep_nest_3.tl")
         self.assert_and_time("c_tight", "c <= 64", "PASSED")
 
@@ -95,7 +95,7 @@ class TestDefaultNestingDepth(PerformanceTestCase):
         self.assert_and_time("all_nonneg", "And(a >= 0, b >= 0, c >= 0, d >= 0)", "PASSED")
 
     def test_nest4_d_tight_pass(self):
-        """d <= 81 tight bound (4-level, hard UNSAT — deeper invariant required)."""
+        """d <= 81 tight bound (4-level, hard UNSAT - deeper invariant required)."""
         self.load("perf_deep_nest_4.tl")
         self.assert_and_time("d_tight", "d <= 81", "PASSED")
 
@@ -108,7 +108,7 @@ class TestDefaultNestingDepth(PerformanceTestCase):
 class TestDefaultWideState(PerformanceTestCase):
     """
     8 chained variables updated every iteration of a 5-step loop.
-    Each variable depends on the previous one (b += a, c += b, …), so the
+    Each variable depends on the previous one (b += a, c += b, ...), so the
     CHC predicate must track an 8-dimensional arithmetic state.
 
     Final values after 5 iterations: a=6, b=22, c=63, d=154, e=336,
@@ -142,7 +142,7 @@ class TestDefaultWideState(PerformanceTestCase):
         self.assert_and_time("h_nonneg", "h >= 0", "PASSED")
 
     def test_wide_h_tight_pass(self):
-        """h <= 2211 is the tight exact bound — hardest UNSAT in this class."""
+        """h <= 2211 is the tight exact bound - hardest UNSAT in this class."""
         self.load("perf_wide_vars.tl")
         self.assert_and_time("h_tight", "h <= 2211", "PASSED")
 
@@ -244,7 +244,7 @@ class TestDefaultHeadingGridCost(PerformanceTestCase):
     def test_turns20_heading_binary_pass(self):
         """Heading visits only {0, 345} => Or(heading==0, heading==345) is invariant."""
         self.load("perf_turns_20.tl", hints=["check_heading_always_on_grid"])
-        result, _, _ = self.assert_and_time(
+        result, _, _, _ = self.assert_and_time(
             "heading_binary", "Or(heading == 0, heading == 345)", "PASSED"
         )
         self.assertEqual(result.heading_grid_safe, "PASSED",
@@ -253,7 +253,7 @@ class TestDefaultHeadingGridCost(PerformanceTestCase):
     def test_turns50_heading_binary_pass(self):
         """Invariant on repeat 50"""
         self.load("perf_turns_50.tl", hints=["check_heading_always_on_grid"])
-        result, _, _ = self.assert_and_time(
+        result, _, _, _ = self.assert_and_time(
             "heading_binary", "Or(heading == 0, heading == 345)", "PASSED"
         )
         self.assertEqual(result.heading_grid_safe, "PASSED",
@@ -262,7 +262,7 @@ class TestDefaultHeadingGridCost(PerformanceTestCase):
     def test_turns20_heading_nonneg_pass(self):
         """heading >= 0. Isolates heading-grid check cost."""
         self.load("perf_turns_20.tl", hints=["check_heading_always_on_grid"])
-        result, _, _ = self.assert_and_time("heading_nonneg", "heading >= 0", "PASSED")
+        result, _, _, _ = self.assert_and_time("heading_nonneg", "heading >= 0", "PASSED")
         self.assertEqual(result.heading_grid_safe, "PASSED",
             f"Expected heading_grid_safe=PASSED, got {result.heading_grid_safe}")
 

@@ -123,14 +123,14 @@ class PerformanceTestCase(unittest.TestCase):
 
     def time_check(self, name: str, expr: str, expected_status: str = None):
         """
-        Run verification under two OptimizationLevels × two hint modes,
+        Run verification under two OptimizationLevels x two hint modes,
         write a single combined CSV row, and return
         (result_none, result_basic,
          result_none_hint, result_basic_hint).
 
         No-hint runs use ["check_heading_always_on_grid"] (the default, which
         queries heading safety).  Hint runs use ["heading_on_grid_always"]
-        (assumes heading is on the 15° grid, skipping that query).
+        (assumes heading is on the 15-degree grid, skipping that query).
 
         verdict_* columns hold the raw solver output (PASSED / FAILED / UNKNOWN).
         result_*  columns hold PASSED when verdict==expected_status, FAILED when
@@ -215,7 +215,7 @@ class PerformanceTestCase(unittest.TestCase):
          result_none_hint, result_basic_hint) = self.time_check(name, expr, expected_status)
 
         if result_none.error == ReturnError.ERROR:
-            self.fail(f"API error: {result_none.expr} — {result_none.advice}")
+            self.fail(f"API error: {result_none.expr} - {result_none.advice}")
 
         for r, label in (
             (result_none,      "NONE"),

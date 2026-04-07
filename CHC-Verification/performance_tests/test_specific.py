@@ -14,8 +14,8 @@ class TestSpecificLoopCountScaling(PerformanceTestCase):
     With init=0  this mirrors TestDefaultLoopCountScaling for direct comparison.
     With init=50 the bound shifts by +50, stressing a larger absolute value range.
 
-    perf_s_repeat_50.tl  (init=0): x goes 0 → 50.
-    perf_s_repeat_100.tl (init=0): x goes 0 → 100.
+    perf_s_repeat_50.tl  (init=0): x goes 0 -> 50.
+    perf_s_repeat_100.tl (init=0): x goes 0 -> 100.
     """
 
     MODE = "specific"
@@ -117,7 +117,7 @@ class TestSpecificNestingDepth(PerformanceTestCase):
         self.assert_and_time("all_nonneg", "And(a >= 0, b >= 0, c >= 0, d >= 0)", "PASSED")
 
     def test_nest4_d_tight_pass(self):
-        """start=0: d ends at 256 — hardest UNSAT"""
+        """start=0: d ends at 256 - hardest UNSAT"""
         self.load("perf_s_nest_4.tl", params={"start": 0})
         self.assert_and_time("d_tight", "d <= 256", "PASSED")
 
@@ -127,7 +127,7 @@ class TestSpecificNestingDepth(PerformanceTestCase):
         self.assert_and_time("d_violated", "d <= 200", "FAILED")
 
     def test_nest4_offset_d_tight_pass(self):
-        """start=10: d ends at 266 — tight bound shifts up by :start."""
+        """start=10: d ends at 266 - tight bound shifts up by :start."""
         self.load("perf_s_nest_4.tl", params={"start": 10})
         self.assert_and_time("d_tight_offset", "d <= 266", "PASSED")
 
@@ -139,7 +139,7 @@ class TestSpecificNestingDepth(PerformanceTestCase):
 
 class TestSpecificWideState(PerformanceTestCase):
     """
-    8-variable chained state (b += a, c += b, …, h += g) — 5 iterations.
+    8-variable chained state (b += a, c += b, ..., h += g) - 5 iterations.
     perf_s_wide.tl has NO literal initial assignments; every initial value
     comes from the params dict.
     """
@@ -149,7 +149,7 @@ class TestSpecificWideState(PerformanceTestCase):
     # positive initial state
 
     def test_wide_all_positive_pos_params_pass(self):
-        """Params {a:1,…,h:8}: initial state already has all > 0 => all > 0 invariant holds.
+        """Params {a:1,...,h:8}: initial state already has all > 0 => all > 0 invariant holds.
         This PASSES in specific mode but would FAIL in default mode."""
         self.load("perf_s_wide.tl",
                   params={"a": 1, "b": 2, "c": 3, "d": 4,
@@ -161,7 +161,7 @@ class TestSpecificWideState(PerformanceTestCase):
         )
 
     def test_wide_a_tight_pass(self):
-        """Params {a:1,…,h:8}: a = 1+#iters => a <= 6 is the exact tight bound."""
+        """Params {a:1,...,h:8}: a = 1+#iters => a <= 6 is the exact tight bound."""
         self.load("perf_s_wide.tl",
                   params={"a": 1, "b": 2, "c": 3, "d": 4,
                           "e": 5, "f": 6, "g": 7, "h": 8})
@@ -259,7 +259,7 @@ class TestSpecificBranchingDensity(PerformanceTestCase):
     # thresh = 4
 
     def test_branches_thresh4_acc_nonneg_pass(self):
-        """thresh=4: higher threshold delays branch firing — acc >= 0 still holds."""
+        """thresh=4: higher threshold delays branch firing - acc >= 0 still holds."""
         self.load("perf_s_branches.tl", params={"thresh": 4})
         self.assert_and_time("acc_nonneg", "acc >= 0", "PASSED")
 
@@ -311,7 +311,7 @@ class TestSpecificTrigScaling(PerformanceTestCase):
         self.assert_and_time("ycor_nonneg", "ycor >= 0", "FAILED")
 
     def test_trig10_large_step_heading_pass(self):
-        """step=50: heading cycling is identical — {0,90,180,270} invariant still holds."""
+        """step=50: heading cycling is identical - {0,90,180,270} invariant still holds."""
         self.load("perf_s_trig_10.tl", params={"step": 50},
                   hints=["heading_on_grid_always"])
         self.assert_and_time(
@@ -345,14 +345,14 @@ class TestSpecificTrigScaling(PerformanceTestCase):
         )
 
     def test_trig20_ycor_violated_fail(self):
-        """ycor goes negative — SAT query on the 20-iteration version (step=10)."""
+        """ycor goes negative - SAT query on the 20-iteration version (step=10)."""
         self.load("perf_s_trig_20.tl", params={"step": 10},
                   hints=["heading_on_grid_always"])
         self.assert_and_time("ycor_nonneg", "ycor >= 0", "FAILED")
 
 class TestSpecificPropertyComplexity(PerformanceTestCase):
     """
-    Fixed program (perf_s_repeat_100.tl, x: 0→100 with init=0) and
+    Fixed program (perf_s_repeat_100.tl, x: 0->100 with init=0) and
     perf_s_wide.tl with positive params, but increasingly complex property
     expressions. 
     """
@@ -370,13 +370,13 @@ class TestSpecificPropertyComplexity(PerformanceTestCase):
         self.assert_and_time("two_atom_conj", "And(x >= 0, x <= 100)", "PASSED")
 
     def test_prop_exact_disjunction_pass(self):
-        """101-way disjunction: Or(x==0, x==1, ..., x==100). Hard UNSAT — explicit enumeration."""
+        """101-way disjunction: Or(x==0, x==1, ..., x==100). Hard UNSAT - explicit enumeration."""
         self.load("perf_s_repeat_100.tl", params={"init": 0})
         expr = "Or(" + ", ".join(f"x == {i}" for i in range(101)) + ")"
         self.assert_and_time("exact_disj_101", expr, "PASSED")
 
     def test_prop_wide_chain_conj_pass(self):
-        """8-atom conjunction across all chained vars — hardest multi-var UNSAT in specific mode."""
+        """8-atom conjunction across all chained vars - hardest multi-var UNSAT in specific mode."""
         self.load("perf_s_wide.tl",
                   params={"a": 1, "b": 2, "c": 3, "d": 4,
                           "e": 5, "f": 6, "g": 7, "h": 8})

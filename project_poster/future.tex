@@ -1,0 +1,9 @@
+\begin{itemize}
+  \item \textbf{Property-aware state projection:} Project the state space onto only the variables relevant to a given property, shrinking the CHC encoding and reducing solver load.
+  \item \textbf{Stronger turn-safety check:} The current heading-grid check conservatively requires both operands of a product to be multiples of 15$^\circ$. Incorporating richer program invariants will reduce unnecessary \texttt{UNKNOWN} verdicts.
+  \item \textbf{Recursive loop summarization:} For perfectly nested affine loops, summarize the inner loop first into a single affine state transformer, then summarize the outer loop with it --- drastically reducing CHC clause counts for deep nesting.
+  \item \textbf{User-specified focus variables (\texttt{focus\_vars}):} Let users name the variables most relevant to a property so the solver reasons over a smaller slice of the state.
+  \item \textbf{Semantic property helpers:} Replace raw property strings with domain-specific helpers such as \texttt{heading\_in(range)}, \texttt{position\_in\_box(...)}, \texttt{pen\_is\_down()} for a friendlier API.
+  \item \textbf{Variable domain declarations:} Extend \texttt{specific} mode to accept intervals or sets of initial values rather than a single concrete assignment.
+\end{itemize}
+
