@@ -1,4 +1,4 @@
-%% ── Verifier Outputs ──────────────────────────────────────────────────────────
+%% -- Verifier Outputs ----------------------------------------------------------
 \heading{Verifier Outputs}
 
 Each \texttt{CHC\_Verification()} call returns a verdict per property:
@@ -13,7 +13,7 @@ Each \texttt{CHC\_Verification()} call returns a verdict per property:
 \end{minipage}}
 
 
-%% ── Correctness Tests ─────────────────────────────────────────────────────────
+%% -- Correctness Tests ---------------------------------------------------------
 \heading{Correctness Tests}
 
 The correctness test suite has, \textbf{206 tests} over \textbf{64 fixture programs} for 3 verification modes,
@@ -30,10 +30,10 @@ Universal & 90 & Symbolic initial state; relational \& terminating props \\
 \end{center}
 6 tests skipped (timeout-prone trig edge cases). \textbf{All 200 active tests pass.}
 
-%% ── Aggregate Perf Stats ──────────────────────────────────────────────────────
-%% ── Aggregate Perf Stats (side-by-side) ───────────────────────────────────────
+%% -- Aggregate Perf Stats ------------------------------------------------------
+%% -- Aggregate Perf Stats (side-by-side) ---------------------------------------
 \heading{Aggregate Performance}
-\vspace{-17mm}
+\vspace{-10mm}
 \noindent
 \begin{minipage}[c]{0.46\linewidth}
 \centering\small
@@ -88,14 +88,14 @@ Specific  & 25.0\% & 34.6\% & 38.5\% & 36.5\% \\
 \end{axis}
 \end{tikzpicture}
 \end{minipage}
-\vspace{-14mm}
-%% ── Optimisation Impact: Specific Cases ───────────────────────────────────────
+\vspace{-5mm}
+%% -- Optimisation Impact: Specific Cases ---------------------------------------
 \heading{Where Optimisations Had the Biggest Impact}
 
 
 \begin{multicols}{2}
 
-\noindent\textbf{Case 1 — BASIC unlocks trig programs}\\[2pt]
+\noindent\textbf{Case 1 - BASIC unlocks trig programs}\\[2pt]
 {\ttfamily\textcolor{gray!60!black}{\# repeat 10 [ forward 10; right 90 ]\\
   verify heading $\in$ \{0,90,180,270\}}}
 
@@ -106,12 +106,12 @@ Specific  & 25.0\% & 34.6\% & 38.5\% & 36.5\% \\
 \end{tabular}
 
 
-{\scriptsize\textit{Why:} NONE encodes \texttt{xcor/ycor} via \texttt{sin/cos} of a symbolic heading — Z3 cannot decide the nonlinear arithmetic.  BASIC detects all turns are multiples of 15°, switches to an \emph{integer heading grid}, eliminating sin/cos entirely.\par}
+{\scriptsize\textit{Why:} NONE encodes \texttt{xcor/ycor} via \texttt{sin/cos} of a symbolic heading - Z3 cannot decide the nonlinear arithmetic.  BASIC detects all turns are multiples of 15-degree, switches to an \emph{integer heading grid}, eliminating sin/cos entirely.\par}
 
 \bigskip
-\noindent\textbf{Case 2 — Hint trivialises heading-grid}\\[2pt]
+\noindent\textbf{Case 2 - Hint trivialises heading-grid}\\[2pt]
 {\ttfamily\textcolor{gray!60!black}{\# repeat 20 [ right 15; left 15 ]\\
-  verify heading $\in$ 15°$\cdot\mathbb{Z}$}}
+  verify heading $\in$ 15-degree$\cdot\mathbb{Z}$}}
 
 
 \begin{tabular}{@{}lll@{}}
@@ -121,11 +121,11 @@ Specific  & 25.0\% & 34.6\% & 38.5\% & 36.5\% \\
 \end{tabular}
 
 
-{\scriptsize\textit{Why:} Both NONE and BASIC must \emph{derive} heading-grid membership via CHC traversal — the 24-way disjunction always times out.  The hint \texttt{heading\_on\_grid\_always} injects it as an axiom, collapsing the proof to trivial modular arithmetic.\par}
+{\scriptsize\textit{Why:} Both NONE and BASIC must \emph{derive} heading-grid membership via CHC traversal - the 24-way disjunction always times out.  The hint \texttt{heading\_on\_grid\_always} injects it as an axiom, collapsing the proof to trivial modular arithmetic.\par}
 
 \columnbreak
 
-\noindent\textbf{Case 3 — BASIC enables nested-loop inv.\ synth.}\\[2pt]
+\noindent\textbf{Case 3 - BASIC enables nested-loop inv.\ synth.}\\[2pt]
 {\ttfamily\textcolor{gray!60!black}{\# 3-level nested loop ($4^3$=64 iters)\\
   verify $a{\ge}0 \wedge b{\ge}0 \wedge c{\ge}0$ at termination}}
 
@@ -140,7 +140,7 @@ Specific  & 25.0\% & 34.6\% & 38.5\% & 36.5\% \\
 {\scriptsize\textit{Why:} NONE generates \texttt{BadHeading} CHC rules for every state, expanding the search space beyond Spacer's reach.  BASIC's static turn-safety pass proves no \texttt{BadHeading} rules are needed, letting Spacer converge.  Adding the hint gives a further 14$\times$ speedup.\par}
 
 \bigskip
-\noindent\textbf{Case 4 — BASIC cuts solve time 220$\times$ (Universal)}\\[2pt]
+\noindent\textbf{Case 4 - BASIC cuts solve time 220$\times$ (Universal)}\\[2pt]
 {\ttfamily\textcolor{gray!60!black}{\# repeat 100 [ :x = :x + 1 ]\\
   verify $x \le 100$ at termination}}
 
@@ -151,6 +151,6 @@ Specific  & 25.0\% & 34.6\% & 38.5\% & 36.5\% \\
 \end{tabular}
 
 
-{\scriptsize\textit{Why:} NONE runs a heading-grid safety query first — even with no turns, Spacer traverses all reachable states, caching lemmas that hurt the main proof.  BASIC proves vacuous turn-safety and \emph{skips that query entirely}, keeping the solver state clean.\par}
+{\scriptsize\textit{Why:} NONE runs a heading-grid safety query first - even with no turns, Spacer traverses all reachable states, caching lemmas that hurt the main proof.  BASIC proves vacuous turn-safety and \emph{skips that query entirely}, keeping the solver state clean.\par}
 
 \end{multicols}
