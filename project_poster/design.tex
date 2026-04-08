@@ -73,7 +73,7 @@ Lookup expansion must remain bounded to control CHC size; failure to prove grid 
 \begin{minipage}[t]{0.48\linewidth}
 \centering
 \begin{tikzpicture}[font=\small, line width=0.5pt, baseline=(ex1.north)]
-\node[draw=creambox, align=left, fill=none, anchor=north, text width=8.75cm, inner sep=6pt] (ex1) at (0,0) {{\ttfamily
+\node[align=left, anchor=north, text width=8.75cm, inner sep=0pt] (ex1) at (0,0) {{\ttfamily
 if :u > 0 [\\
 \hspace*{1.2em}:t = 30\\
 ] else [\\
@@ -82,14 +82,53 @@ if :u > 0 [\\
 left :t\\
 forward 20}};
 \end{tikzpicture}
+\par\vspace{1.0em}
+\begin{minipage}[t]{8.75cm}
+\raggedright
+\begin{tabular}{@{}lll@{}}
+\texttt{NONE}  & \textcolor{orange!80!black}{UNKNOWN} & timeout (60\,s) \\
+\texttt{BASIC} & \textcolor{green!60!black}{PASSED}  & solve \textbf{0.055\,s} \\
+\end{tabular}
+
+\vspace{0.9em}
+{\textit{Why:} \texttt{:t} can only be \texttt{30} or \texttt{45}, so both branches stay on the 15-degree heading grid.
+The divisibility check \texttt{(n \% 15 == 0)} is resolved statically on numeric literals, without adding extra arithmetic constraints to Z3.
+Under BASIC, this turn is marked safe and its \texttt{BadHeading} rule is not emitted.
+That shrinks the CHC system and avoids the heading-safety timeout seen in NONE.\par}
+\end{minipage}
 \end{minipage}
 
 \vspace{0.6em}
 {\centering\large\textbf{Repeat-Loop Summarization}\par}
-\noindent\hfill
+\noindent
 \begin{minipage}[t]{0.48\linewidth}
 \centering
-\begin{tikzpicture}[>=stealth, line width=0.5pt, font=\small]
+\begin{tikzpicture}[font=\small, line width=0.5pt, baseline=(ex2.north)]
+\node[align=left, anchor=north, text width=8.75cm, inner sep=0pt] (ex2) at (0,0) {{\ttfamily
+:b = 0\\
+repeat 100 [\\
+\hspace*{1.2em}:a = :a + 1\\
+\hspace*{1.2em}:b = :b + :a\\
+]}};
+\end{tikzpicture}
+\par\vspace{1.0em}
+\begin{minipage}[t]{8.75cm}
+\raggedright
+\begin{tabular}{@{}lll@{}}
+\texttt{NONE}  & \textcolor{green!60!black}{PASSED} & solve \textbf{35.16\,s} \\
+\texttt{BASIC} & \textcolor{green!60!black}{PASSED} & solve \textbf{0.063\,s} \\
+\end{tabular}
+
+\vspace{0.9em}
+{\textit{Why:} BASIC detects this repeat body as summarizable and composes all 100 iterations into one summarized loop effect.
+Instead of exploring each loop step through many CHC transitions, the solver reasons over a single compact relation from loop entry to exit.
+This drastically reduces search depth and clause churn during solving.
+The extra work shifts to build-time summarization, yielding a much faster proof query.\par}
+\end{minipage}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\linewidth}
+\centering
+\begin{tikzpicture}[>=stealth, line width=0.5pt, font=\small, baseline=(current bounding box.north)]
 \tikzset{
   loopkey/.style={draw, align=center, fill=designblue, text width=8.75cm, inner sep=4pt},
   loopdec/.style={draw, align=center, fill=designblue, text width=8.75cm, inner sep=4pt},

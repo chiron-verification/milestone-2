@@ -10,7 +10,7 @@ _MULT15_VALUES = {
 }
 
 # Cap loop unrolling during summarization to avoid excessive rule generation.
-MAX_SUMMARIZE_ITERATIONS = 50
+MAX_SUMMARIZE_ITERATIONS = 150
 
 def linearized_trig_move(x, y, h, delta, forward=True):
     delta_real = ToReal(delta) if delta.sort() == IntSort() else delta
