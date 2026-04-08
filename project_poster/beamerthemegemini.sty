@@ -15,21 +15,25 @@
 % Fonts
 % ====================
 
-\newcommand{\ralewaypath}{/usr/local/texlive/2026basic/texmf-dist/fonts/opentype/impallari/raleway/}
-\newcommand{\latopath}{/usr/local/texlive/2026basic/texmf-dist/fonts/truetype/typoland/lato/}
+\newcommand{\ralewaypath}{/usr/share/fonts/opentype/raleway/}
+\newcommand{\latopath}{/usr/share/fonts/truetype/lato/}
 
 \IfFontExistsTF{Raleway}{%
   \newfontfamily\Raleway[Ligatures=TeX]{Raleway}%
 }{%
-  \newfontfamily\Raleway[
-    Ligatures=TeX,
-    Path=\ralewaypath,
-    Extension=.otf,
-    UprightFont=Raleway-Regular,
-    ItalicFont=Raleway-RegularItalic,
-    BoldFont=Raleway-Bold,
-    BoldItalicFont=Raleway-BoldItalic
-  ]{Raleway-Regular}%
+  \IfFileExists{\ralewaypath/Raleway-Regular.otf}{%
+    \newfontfamily\Raleway[
+      Ligatures=TeX,
+      Path=\ralewaypath/,
+      Extension=.otf,
+      UprightFont=Raleway-Regular,
+      ItalicFont=Raleway-RegularItalic,
+      BoldFont=Raleway-Bold,
+      BoldItalicFont=Raleway-BoldItalic
+    ]{Raleway-Regular}%
+  }{%
+    \newfontfamily\Raleway[Ligatures=TeX]{Lato}%
+  }%
 }
 
 \IfFontExistsTF{Lato}{%
@@ -37,7 +41,7 @@
 }{%
   \newfontfamily\Lato[
     Ligatures=TeX,
-    Path=\latopath,
+    Path=\latopath/,
     Extension=.ttf,
     UprightFont=Lato-Regular,
     ItalicFont=Lato-Italic,
@@ -57,7 +61,7 @@
   ]%
 }{%
   \setsansfont[
-    Path=\latopath,
+    Path=\latopath/,
     Extension=.ttf,
     UprightFont=Lato-Light,
     ItalicFont=Lato-LightItalic,

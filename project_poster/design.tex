@@ -26,11 +26,11 @@ This section summarizes the principal modeling and solver choices adopted in the
 \textbf{CHCs solved by Z3 SPACER} &
 Supports unbounded safety checking through inductive invariant synthesis and returns counterexample witnesses on violation. &
 Performance remains sensitive to nonlinear arithmetic obligations; solver outcomes may be \texttt{UNKNOWN}. \\
-
+\hline
 \textbf{Full state (\texttt{pc}+counters+vars)} &
 Encodes control-state and data-state dependencies in one relation: \texttt{pc} for control/termination, \texttt{xcor/ycor/heading} for geometric predicates, and loop counters for repeat constructs. &
 Properties over a strict subset of variables still incur full-arity reasoning, increasing solver cost. \\
-
+\hline
 \textbf{Strict heading lattice + \texttt{BadHeading}} &
 Avoids direct transcendental \texttt{sin/cos} constraints in SPACER by using a finite 15-degree trigonometric lookup table (precomputed in Python) with explicit \texttt{BadHeading} obligations. &
 Lookup expansion must remain bounded to control CHC size; failure to prove grid preservation yields conservative \texttt{UNKNOWN} outcomes. \\
