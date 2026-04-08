@@ -95,7 +95,7 @@ Specific  & 25.0\% & 34.6\% & 38.5\% & 36.5\% \\
 
 \begin{multicols}{2}
 
-\noindent\textbf{Case 1 — BASIC unlocks trig programs}\\[2pt]
+\noindent\textbf{Case 1 - BASIC unlocks trig programs}\\[2pt]
 {\ttfamily\textcolor{gray!60!black}{\# repeat 10 [ forward 10; right 90 ]\\
   verify heading $\in$ \{0,90,180,270\}}}
 
@@ -106,10 +106,10 @@ Specific  & 25.0\% & 34.6\% & 38.5\% & 36.5\% \\
 \end{tabular}
 
 
-{\scriptsize\textit{Why:} NONE encodes \texttt{xcor/ycor} via \texttt{sin/cos} of a symbolic heading — Z3 cannot decide the nonlinear arithmetic.  BASIC detects all turns are multiples of 15°, switches to an \emph{integer heading grid}, eliminating sin/cos entirely.\par}
+{\scriptsize\textit{Why:} NONE encodes \texttt{xcor/ycor} via \texttt{sin/cos} of a symbolic heading - Z3 cannot decide the nonlinear arithmetic.  BASIC detects all turns are multiples of 15°, switches to an \emph{integer heading grid}, eliminating sin/cos entirely.\par}
 
 \bigskip
-\noindent\textbf{Case 2 — Hint trivialises heading-grid}\\[2pt]
+\noindent\textbf{Case 2 - Hint trivialises heading-grid}\\[2pt]
 {\ttfamily\textcolor{gray!60!black}{\# repeat 20 [ right 15; left 15 ]\\
   verify heading $\in$ 15°$\cdot\mathbb{Z}$}}
 
