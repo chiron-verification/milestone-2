@@ -14,9 +14,9 @@
 % ====================
 % Fonts
 % ====================
+\newcommand{\ralewaypath}{/usr/local/texlive/2026basic/texmf-dist/fonts/opentype/impallari/raleway/}
+\newcommand{\latopath}{/usr/local/texlive/2026basic/texmf-dist/fonts/truetype/typoland/lato/}
 
-\newcommand{\ralewaypath}{/usr/share/fonts/opentype/raleway/}
-\newcommand{\latopath}{/usr/share/fonts/truetype/lato/}
 
 \IfFontExistsTF{Raleway}{%
   \newfontfamily\Raleway[Ligatures=TeX]{Raleway}%
@@ -204,12 +204,14 @@
 % Block
 \setbeamertemplate{block begin}
 {
+  \vspace{-0.5cm}
   \begin{beamercolorbox}[colsep*=0ex,dp=2ex,center]{block title}
     \vskip0pt
     \usebeamerfont{block title}\insertblocktitle
-    \vskip-1.25ex
+    \vskip-1.75ex
     \begin{beamercolorbox}[colsep=0.025ex]{block separator}\end{beamercolorbox}
   \end{beamercolorbox}
+  \vspace{-0.2cm}
   {\parskip0pt\par}
   \usebeamerfont{block body}
   \vskip-0.5ex
@@ -238,6 +240,7 @@
   \usebeamerfont{block body}
   \vskip-0.5ex
   \begin{beamercolorbox}[colsep*=0ex]{block alerted body}
+  \hspace{-5cm}
   \justifying
   \begin{adjustwidth}{1ex}{1ex}
   \setlength{\parskip}{1ex}
@@ -265,6 +268,7 @@
   \usebeamerfont{block body}
   \vskip-0.5ex
   \begin{beamercolorbox}[colsep*=0ex]{block example body}
+  \hspace{-5cm}
   \justifying
   \begin{adjustwidth}{1ex}{1ex}
   \setlength{\parskip}{1ex}

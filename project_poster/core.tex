@@ -1,25 +1,9 @@
+\vspace{-0.5cm}
 \heading{Overview of the pipeline}
 The pipeline takes a source turtle program and a set of safety properties as input. Using Chiron's API, the program is translated to Chiron-IR and its relevant user and state variables are extracted. The program semantics are then encoded as Constrained Horn Clauses (CHCs), and combined with the properties expressed in CHC form. This CHC system is given to \texttt{Z3}'s \texttt{SPACER} engine, which checks whether an \textbf{unsafe} state is reachable. A \texttt{sat} result yields a concrete counterexample, while \texttt{unsat} proves that the property holds.
-
+\vspace{-1.2cm}
 \heading{Features}
 
-%% EQUIVALENT TABLE BELOW
-% \begin{itemize}
-%     \item 
-%     Our verifier supports the following modes:
-%     \begin{enumerate}
-%         \item \textbf{universal:} The property is checked over all possible values of the user input variables, with the turtle starting starting at origin with \texttt{pendown=True}
-%         \item \textbf{default:} The property is checked over all the user variables initialized to 0, with the turtle starting at origin with \texttt{pendown=False}
-%         \item \textbf{specific:} Similar to default mode except that user can explicitly initialize some or all of user variables to their values of choice.
-%     \end{enumerate}
-
-%     \item 
-%     Additionally, the verifier supports two property scopes, indepedent of the mode:
-%     \begin{enumerate}
-%         \item \textbf{all}: The safety guarantee of the property is understood as to hold at every point in the program
-%         \item \textbf{terminating}: The safety guarantee of the property is understood as to hold only at the point of the termination of the program
-%     \end{enumerate}
-% \end{itemize}
 \begin{table}
   \centering
   \begin{tabular}{
@@ -36,9 +20,9 @@ The pipeline takes a source turtle program and a set of safety properties as inp
     \multirow{2}{*}{\textbf{Property Scope}} & \textbf{all} & Interprets the safety guarantee as required to hold at every point during program execution. \\
     & \textbf{terminating} & Interprets the safety guarantee as required to hold only at program termination. \\
   \end{tabular}
-  \caption{Verification modes and property scopes supported by the verifier.}
+  % \caption{Verification modes and property scopes supported by the verifier.}
 \end{table}
-
+\vspace{-0.5cm}
 \begin{figure}[h]
 \centering
 \resizebox{\linewidth}{!}{%
@@ -129,6 +113,6 @@ termination unknown, timeout\\
 
 \end{tikzpicture}%
 }
-\caption{Main verification pipeline showing stage responsibilities and data artifacts flowing through parsing, CHC construction, heading/scope controls, and final result aggregation.}
+% \caption{Main verification pipeline showing stage responsibilities and data artifacts flowing through parsing, CHC construction, heading/scope controls, and final result aggregation.}
 \label{fig:main_pipeline_flow}
 \end{figure}

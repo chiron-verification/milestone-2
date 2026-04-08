@@ -1,10 +1,12 @@
+% \vspace{-0.5cm}
 \definecolor{designblue}{RGB}{222,236,248}
 \definecolor{creambox}{RGB}{255,247,232}
 
 \setlength{\tabcolsep}{3pt}
 \renewcommand{\arraystretch}{1.2}
-
+\vspace{-0.5cm}
 \heading{Design Choices}
+\vspace{-0.2cm}
 This section summarizes the principal modeling and solver choices adopted in the verifier.
 
 \begin{itemize}
@@ -16,8 +18,8 @@ This section summarizes the principal modeling and solver choices adopted in the
 \begin{table}[h]
 \centering
 \begin{tabular}{
-  >{\raggedright\arraybackslash\columncolor{designblue}}p{0.25\linewidth}
-  p{0.34\linewidth}
+  >{\raggedright\arraybackslash\columncolor{designblue}}p{0.2\linewidth}
+  p{0.39\linewidth}
   p{0.35\linewidth}
 }
 \rowcolor{designblue}
@@ -37,12 +39,13 @@ Lookup expansion must remain bounded to control CHC size; failure to prove grid 
 
 \end{tabular}
 \end{table}
-
+\vspace{-0.7cm}
 \heading{Optimizations}
 
 %% ---------------- Turn-Safe Heading Inference ----------------
+\vspace{-0.3cm}
 {\centering\large\textbf{Turn-Safe Heading Inference}\par}
-\vspace{0.4em}
+\vspace{-0.2cm}
 \noindent
 \begin{minipage}[t]{0.46\linewidth}
 \vspace{0pt}
@@ -105,11 +108,11 @@ Lookup expansion must remain bounded to control CHC size; failure to prove grid 
 \small\textit{Why:} \texttt{:t} can only be \texttt{30} or \texttt{45}, so both branches stay on the 15-degree heading grid. The divisibility check \texttt{(n \% 15 == 0)} is resolved statically on numeric literals, without adding extra arithmetic constraints to Z3. Under BASIC, this turn is marked safe and its \texttt{BadHeading} rule is not emitted. That shrinks the CHC system and avoids the heading-safety timeout seen in NONE.
 \end{minipage}
 
-\vspace{1.2em}
+% \vspace{0.2em}
 
 %% ---------------- Repeat-Loop Summarization ----------------
 {\centering\large\textbf{Repeat-Loop Summarization}\par}
-\vspace{0.4em}
+% \vspace{0.4em}
 \noindent
 \begin{minipage}[t]{0.46\linewidth}
 \vspace{0pt}

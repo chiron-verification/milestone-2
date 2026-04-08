@@ -1,0 +1,13 @@
+% -- Verifier Outputs ----------------------------------------------------------
+\heading{Verifier Outputs}
+
+Each \texttt{CHC\_Verification()} call returns a verdict per property:
+
+
+\colorbox{gray!12}{\begin{minipage}{0.94\linewidth}\ttfamily
+\$ CHC\_Verification("square.tl", "default", [\ldots])\\[0.3em]
+\textcolor{green!50!black}{[PASSED]} Property 'pen\_up' is an invariant.\\
+\textcolor{red!70!black}{[FAILED]} Property 'x\_pos': counterexample found.\\
+\textcolor{orange!70!black}{[UNKNOWN]} Property 'heading': solver timed out.\\[0.3em]
+\normalfont\itshape build: 0.094 s \enspace solve: 0.03 s,\ 1.74 s,\ 60.0 s
+\end{minipage}}

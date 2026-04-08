@@ -1,68 +1,33 @@
+\vspace{-1mm}
 \begin{multicols}{2}
 %% -- Verifier Outputs ----------------------------------------------------------
-\heading{Verifier Outputs}
+% \heading{Verifier Outputs}
 
-Each \texttt{CHC\_Verification()} call returns a verdict per property:
+% Each \texttt{CHC\_Verification()} call returns a verdict per property:
 
 
-\colorbox{gray!12}{\begin{minipage}{0.94\linewidth}\ttfamily
-\$ CHC\_Verification("square.tl", "default", [\ldots])\\[0.3em]
-\textcolor{green!50!black}{[PASSED]} Property 'pen\_up' is an invariant.\\
-\textcolor{red!70!black}{[FAILED]} Property 'x\_pos': counterexample found.\\
-\textcolor{orange!70!black}{[UNKNOWN]} Property 'heading': solver timed out.\\[0.3em]
-\normalfont\itshape build: 0.094 s \enspace solve: 0.03 s,\ 1.74 s,\ 60.0 s
-\end{minipage}}
-
-\vspace{-5mm}
-%% -- Correctness Tests ---------------------------------------------------------
-\heading{Correctness Tests}
-
-The correctness test suite has, \textbf{206 tests} over \textbf{64 fixture programs} for 3 verification modes,
-\begin{center}
-\begin{tabular}{@{}lll@{}}
-\toprule
-\textbf{Mode} & \textbf{Tests} & \textbf{Coverage} \\
-\midrule
-Default   & 48 & Arithmetic, geometric, pen, heading, nested loops \\
-Specific  & 70 & Parameterised init; boundary-sensitive outcomes \\
-Universal & 90 & Symbolic initial state; relational \& terminating props \\
-\bottomrule
-\end{tabular}
-\end{center}
-6 tests skipped (timeout-prone trig edge cases). \textbf{All 200 active tests pass.}
-
-%% -- Aggregate Perf Stats ------------------------------------------------------
-%% -- Aggregate Perf Stats (side-by-side) ---------------------------------------
-\vspace{-5mm}
+% \colorbox{gray!12}{\begin{minipage}{0.94\linewidth}\ttfamily
+% \$ CHC\_Verification("square.tl", "default", [\ldots])\\[0.3em]
+% \textcolor{green!50!black}{[PASSED]} Property 'pen\_up' is an invariant.\\
+% \textcolor{red!70!black}{[FAILED]} Property 'x\_pos': counterexample found.\\
+% \textcolor{orange!70!black}{[UNKNOWN]} Property 'heading': solver timed out.\\[0.3em]
+% \normalfont\itshape build: 0.094 s \enspace solve: 0.03 s,\ 1.74 s,\ 60.0 s
+% \end{minipage}}
+% %% -- Aggregate Perf Stats ------------------------------------------------------
+% %% -- Aggregate Perf Stats (side-by-side) ---------------------------------------
 \heading{Aggregate Performance}
-\vspace{2mm}
+\vspace{1mm}
 \noindent
-\begin{minipage}[c]{0.46\linewidth}
-\centering\small
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Mode} & \textbf{NONE} & \textbf{BASIC} & \textbf{NONE+H} & \textbf{BASIC+H} \\
-\midrule
-Default   & 38.5\% & 59.0\% & 59.0\% & 59.0\% \\
-Universal & 68.4\% & 89.5\% & 78.9\% & \textbf{94.7\%} \\
-Specific  & 25.0\% & 34.6\% & 38.5\% & 36.5\% \\
-\midrule
-\textbf{Overall} & 41.9\% & 58.1\% & 56.6\% & \textbf{60.5\%} \\
-\bottomrule
-\end{tabular}
-\end{minipage}%
-\hfill
-\begin{minipage}[c]{0.52\linewidth}
+\begin{minipage}[c]{0.9\linewidth}
 \centering
 \begin{tikzpicture}
 \begin{axis}[
     ybar,
     width=\linewidth,
-    height=0.6\linewidth,
-    bar width=22pt,
+    height=0.5\linewidth,
+    bar width=40pt,
     ymajorgrids=true,
     grid style=dashed,
-    xlabel={Configuration},
     ylabel={Completion (\%)},
     symbolic x coords={NONE,BASIC,NONE+H,BASIC+H},
     xtick=data,
