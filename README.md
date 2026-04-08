@@ -206,7 +206,7 @@ Examples:
 ## Test Information
 
 Test suite details are documented separately in:
-`CHC-Verification/correctness_tests/README.md`
+`CHC-Verification/correctness_tests/README.md` and `CHC-Verification/performance_tests/README.md`
 
 Quick commands:
 

@@ -174,4 +174,4 @@ build/
 *.fdb_latexmk
 *.blg
 *.zip
-.DS_Store
+**/.DS_Store
