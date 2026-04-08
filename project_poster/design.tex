@@ -13,7 +13,7 @@ This section summarizes the principal modeling and solver choices adopted in the
   \item \textbf{Heading-lattice geometry model:} Heading is normalized to \texttt{[0,360)} and constrained to \texttt{\{0,15,\dots,345\}}, with violations represented explicitly via \texttt{BadHeading}.
 \end{itemize}
 
-\begin{table}
+\begin{table}[h]
 \centering
 \begin{tabular}{
   >{\raggedright\arraybackslash\columncolor{designblue}}p{0.25\linewidth}
@@ -39,121 +39,130 @@ Lookup expansion must remain bounded to control CHC size; failure to prove grid 
 \end{table}
 
 \heading{Optimizations}
+
+%% ---------------- Turn-Safe Heading Inference ----------------
 {\centering\large\textbf{Turn-Safe Heading Inference}\par}
+\vspace{0.4em}
 \noindent
-\begin{minipage}[t]{0.48\linewidth}
+\begin{minipage}[t]{0.46\linewidth}
+\vspace{0pt}
 \centering
-\begin{tikzpicture}[>=stealth, line width=0.5pt, font=\small, baseline=(current bounding box.north)]
+\begin{tikzpicture}[>=stealth, line width=0.5pt, font=\footnotesize]
 \tikzset{
-  optkey/.style={draw, align=center, fill=designblue, text width=8.75cm, inner sep=4pt},
-  optdec/.style={draw, align=center, fill=designblue, text width=8.75cm, inner sep=4pt},
-  optoutno/.style={draw, align=center, fill=red!12, text width=4.05cm, inner sep=4pt, minimum height=2.35cm},
-  optoutyes/.style={draw, align=center, fill=green!12, text width=4.05cm, inner sep=4pt, minimum height=2.35cm}
+  optkey/.style={draw, align=left,   fill=designblue, text width=8.4cm, inner sep=4pt},
+  optdec/.style={draw, align=center, fill=designblue, text width=8.4cm, inner sep=4pt},
+  optoutno/.style={draw, align=center, fill=red!12, text width=4.5cm,
+                 inner sep=4pt, minimum height=1.8cm},
+  optoutyes/.style={draw, align=center, fill=green!12, text width=4.5cm,
+                  inner sep=4pt, minimum height=1.8cm}
 }
 
-\node[optkey] (k1) at (0,0) {\textbf{Predicate used for each turn}\\[-1pt]
-{\footnotesize\texttt{is\_multiple\_of\_15(e, env)}\\
+\node[optkey] (k1) at (0,0) {%
+\textbf{\centering Predicate \texttt{is\_multiple\_of\_15(e, env)}}\\[2pt]
 \texttt{Num n:} int and \texttt{n \% 15 == 0}\\
-\texttt{Var v:} \texttt{env[v]}\\
-\texttt{UMinus:} recurse\\
-\texttt{Sum/Diff:} known(l,r) and (l or r)\\ $\Rightarrow$ \texttt{l and r}, else \texttt{Unknown}\\
-\texttt{Mult:} \texttt{True} iff \texttt{l=True} and \texttt{r=True}, else \texttt{Unknown}}};
+\texttt{Var v:} lookup \texttt{env[v]}\\
+\texttt{UMinus:} recurse on operand\\
+\texttt{Sum/Diff:} both known $\Rightarrow$ and;\\
+\hspace*{1em}else \texttt{Unknown}\\
+\texttt{Mult:} \texttt{True} iff both \texttt{True}};
 
-\node[optdec] (d1) at (0,-4.2) {\texttt{is\_multiple\_of\_15(delta\_heading[i], env\_in[i]) == True}?};
+\node[optdec, below=1.2cm of k1] (d1)
+  {\texttt{is\_multiple\_of\_15(delta\_heading[i],}\\\texttt{env\_in[i]) == True}?};
 
-\node[optoutno] (nL) at (-2.35,-8.0) {\texttt{turn\_safe\_map[i]} \texttt{= False}\\Emit\\\texttt{BadHeading} rule\\for turn $i$.};
-\node[optoutyes] (nR) at (2.35,-8.0) {\texttt{turn\_safe\_map[i]} \texttt{= True}\\Skip\\\texttt{BadHeading} rule\\for turn $i$.};
+\node[optoutno,  below left=2.5cm and -4.0cm of d1] (nL)
+  {\texttt{turn\_safe\_map[i]}\\\texttt{= False}\\[2pt]Emit \texttt{BadHeading}\\rule for turn $i$.};
+\node[optoutyes, below right=2.5cm and -4.0cm of d1] (nR)
+  {\texttt{turn\_safe\_map[i]}\\\texttt{= True}\\[2pt]Skip \texttt{BadHeading}\\rule for turn $i$.};
 
-\draw[->] (k1) -- node[pos=0.56, right, fill=white, inner sep=1pt] {\footnotesize \texttt{optimization\_level == BASIC}} (d1);
-\draw[->] (d1.south) -- node[midway, above, sloped, fill=white, inner sep=1pt] {\footnotesize \texttt{no}} (nL.north);
-\draw[->] (d1.south) -- node[midway, above, sloped, fill=white, inner sep=1pt] {\footnotesize \texttt{yes}} (nR.north);
+\draw[->] (k1) -- node[right, fill=white, inner sep=1pt]
+  {\scriptsize \texttt{opt == BASIC}} (d1);
+\draw[->] (d1.south) -- node[above, sloped, fill=white, inner sep=1pt] {\scriptsize no} (nL.north);
+\draw[->] (d1.south) -- node[above, sloped, fill=white, inner sep=1pt] {\scriptsize yes} (nR.north);
 \end{tikzpicture}
-\end{minipage}\hspace{0.5cm}
-\begin{minipage}[t]{0.48\linewidth}
-\centering
-\begin{tikzpicture}[font=\small, line width=0.5pt, baseline=(ex1.north)]
-\node[align=left, anchor=north, text width=8.75cm, inner sep=0pt] (ex1) at (0,0) {{\ttfamily
-if :u > 0 [\\
-\hspace*{1.2em}:t = 30\\
-] else [\\
-\hspace*{1.2em}:t = 45\\
-]\\
-left :t\\
-forward 20}};
-\end{tikzpicture}
-\par\vspace{1.0em}
-\begin{minipage}[t]{8.75cm}
-\raggedright
+\end{minipage}%
+\begin{minipage}[t]{0.50\linewidth}
+\vspace{0pt}
+\colorbox{gray!12}{%
+  \begin{minipage}{\linewidth}
+    \ttfamily
+    if :u > 0 [ \\
+    \hspace*{1.2em}:t = 30 \\
+    ] else [ \\
+    \hspace*{1.2em}:t = 45 \\
+    ] \\
+    left :t \\
+    forward 20
+  \end{minipage}%
+}
+
+\vspace{0.8em}
 \begin{tabular}{@{}lll@{}}
 \texttt{NONE}  & \textcolor{orange!80!black}{UNKNOWN} & timeout (60\,s) \\
 \texttt{BASIC} & \textcolor{green!60!black}{PASSED}  & solve \textbf{0.055\,s} \\
 \end{tabular}
 
-\vspace{0.9em}
-{\textit{Why:} \texttt{:t} can only be \texttt{30} or \texttt{45}, so both branches stay on the 15-degree heading grid.
-The divisibility check \texttt{(n \% 15 == 0)} is resolved statically on numeric literals, without adding extra arithmetic constraints to Z3.
-Under BASIC, this turn is marked safe and its \texttt{BadHeading} rule is not emitted.
-That shrinks the CHC system and avoids the heading-safety timeout seen in NONE.\par}
-\end{minipage}
+\vspace{0.6em}
+\small\textit{Why:} \texttt{:t} can only be \texttt{30} or \texttt{45}, so both branches stay on the 15-degree heading grid. The divisibility check \texttt{(n \% 15 == 0)} is resolved statically on numeric literals, without adding extra arithmetic constraints to Z3. Under BASIC, this turn is marked safe and its \texttt{BadHeading} rule is not emitted. That shrinks the CHC system and avoids the heading-safety timeout seen in NONE.
 \end{minipage}
 
-\vspace{0.1em}
+\vspace{1.2em}
+
+%% ---------------- Repeat-Loop Summarization ----------------
 {\centering\large\textbf{Repeat-Loop Summarization}\par}
+\vspace{0.4em}
 \noindent
-\begin{minipage}[t]{0.48\linewidth}
+\begin{minipage}[t]{0.46\linewidth}
+\vspace{0pt}
 \centering
-\begin{tikzpicture}[font=\small, line width=0.5pt, baseline=(ex2.north)]
-\node[align=left, anchor=north, text width=8.75cm, inner sep=0pt] (ex2) at (0,0) {{\ttfamily
-:b = 0\\
-repeat 100 [\\
-\hspace*{1.2em}:a = :a + 1\\
-\hspace*{1.2em}:b = :b + :a\\
-]}};
+\begin{tikzpicture}[>=stealth, line width=0.5pt, font=\footnotesize]
+\tikzset{
+  loopkey/.style={draw, align=center, fill=designblue, text width=8.4cm, inner sep=4pt},
+  loopdec/.style={draw, align=center, fill=designblue, text width=8.4cm, inner sep=4pt},
+  loopoutno/.style={draw, align=center, fill=red!12,   text width=6.0cm, inner sep=3pt, minimum height=2.4cm},
+  loopoutyes/.style={draw, align=center, fill=green!12, text width=6.0cm, inner sep=3pt, minimum height=2.4cm}
+}
+
+\node[loopkey] (r1) at (0,0) {%
+\textbf{Detect repeat-loop pattern}\\[2pt]
+\texttt{c = N} $\rightarrow$ \texttt{c > 0} $\rightarrow$ body\\
+$\rightarrow$ \texttt{c = c - 1} $\rightarrow$ back-jump,\ \texttt{N > 0}};
+
+\node[loopdec, below=1.2cm of r1] (r2) {%
+\textbf{Summarizable?}\\[2pt]
+no if/assert in body\ +\ body jump = 1\\
++\ counter not used in body};
+
+\node[loopoutno,  below left=2.5cm and -4.0cm of r2] (rL)
+  {Use regular per-instruction CHC rules.\\[2pt]Skip emission only for \texttt{skip\_indices}.};
+\node[loopoutyes, below right=2.5cm and -4.0cm of r2] (rR)
+  {Summarize \texttt{N} iters into one effect.\\[2pt]Emit \texttt{Inv(init\_pc $\to$ exit\_pc)} and summarized \texttt{BadHeading}.};
+
+\draw[->] (r1) -- node[right, fill=white, inner sep=1pt]
+  {\scriptsize \texttt{opt == BASIC}} (r2);
+\draw[->] (r2.south) -- node[above, sloped, fill=white, inner sep=1pt] {\scriptsize no}  (rL.north);
+\draw[->] (r2.south) -- node[above, sloped, fill=white, inner sep=1pt] {\scriptsize yes} (rR.north);
 \end{tikzpicture}
-\par\vspace{1.0em}
-\begin{minipage}[t]{8.75cm}
-\raggedright
+\end{minipage}%
+\hfill
+\begin{minipage}[t]{0.50\linewidth}
+\vspace{0pt}
+\colorbox{gray!12}{%
+  \begin{minipage}{\linewidth}
+    \ttfamily\small
+    :b = 0\\
+    repeat 100 [\\
+    \hspace*{1.2em}:a = :a + 1\\
+    \hspace*{1.2em}:b = :b + :a\\
+    ]
+  \end{minipage}%
+}
+
+\vspace{0.8em}
 \begin{tabular}{@{}lll@{}}
 \texttt{NONE}  & \textcolor{green!60!black}{PASSED} & solve \textbf{35.16\,s} \\
 \texttt{BASIC} & \textcolor{green!60!black}{PASSED} & solve \textbf{0.063\,s} \\
 \end{tabular}
 
-\vspace{0.9em}
-{\textit{Why:} BASIC detects this repeat body as summarizable and composes all 100 iterations into one summarized loop effect.
-Instead of exploring each loop step through many CHC transitions, the solver reasons over a single compact relation from loop entry to exit.
-This drastically reduces search depth and clause churn during solving.
-The extra work shifts to build-time summarization, yielding a much faster proof query.\par}
-\end{minipage}
-\end{minipage}\hfill
-\begin{minipage}[t]{0.48\linewidth}
-\centering
-\begin{tikzpicture}[>=stealth, line width=0.5pt, font=\small, baseline=(current bounding box.north)]
-\tikzset{
-  loopkey/.style={draw, align=center, fill=designblue, text width=8.75cm, inner sep=4pt},
-  loopdec/.style={draw, align=center, fill=designblue, text width=8.75cm, inner sep=4pt},
-  loopoutno/.style={draw, align=center, anchor=north, fill=red!12, text width=4.05cm, inner sep=4pt, minimum height=4.8cm},
-  loopoutyes/.style={draw, align=center, anchor=north, fill=green!12, text width=4.05cm, inner sep=4pt, minimum height=4.8cm}
-}
-
-\node[loopkey] (r1) at (0,0) {\textbf{Detect repeat-loop pattern}\\
-\texttt{c = N} $\rightarrow$ \texttt{c > 0} $\rightarrow$ body\\
-$\rightarrow$ \texttt{c = c - 1} $\rightarrow$ back-jump,\ \texttt{N > 0}};
-
-\node[loopdec] (r2) at (0,-3.1) {\textbf{Summarizable?}\\
-\texttt{no if/assert in body} \quad+\quad \texttt{body jump = 1} \quad+\quad \texttt{counter not used in body}};
-
-\node[loopoutno] (rL) at (-2.35,-5.9) {
-Use regular per-instruction CHC rules.\\
-Skip emission only for\\
-\texttt{skip\_indices}.};
-\node[loopoutyes] (rR) at (2.35,-5.9) {
-Summarize \texttt{N} iterations into one effect.\\
-Emit \texttt{Inv(init\_pc -> exit\_pc)}.\\
-Emit summarized \texttt{BadHeading}\\
-only when violations can still occur.};
-
-\draw[->] (r1) -- node[pos=0.54, right, fill=white, inner sep=1pt] {\footnotesize \texttt{optimization\_level == BASIC}} (r2);
-\draw[->] (r2.south) -- node[midway, above, sloped, fill=white, inner sep=1pt] {\footnotesize \texttt{no}} (rL.north);
-\draw[->] (r2.south) -- node[midway, above, sloped, fill=white, inner sep=1pt] {\footnotesize \texttt{yes}} (rR.north);
-\end{tikzpicture}
+\vspace{0.6em}
+\small\textit{Why:} BASIC detects this repeat body as summarizable and composes all 100 iterations into one summarized loop effect. Instead of exploring each loop step through many CHC transitions, the solver reasons over a single compact relation from loop entry to exit. This drastically reduces search depth and clause churn during solving. The extra work shifts to build-time summarization, yielding a much faster proof query.
 \end{minipage}

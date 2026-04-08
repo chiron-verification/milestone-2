@@ -20,6 +20,7 @@
 \usepackage[numbers]{natbib}
 \usepackage[patch=none]{microtype}
 \usepackage{tikz}
+\usetikzlibrary{positioning}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 \usepackage{anyfontsize}
@@ -61,11 +62,10 @@
 % Title
 % ====================
 
-\title{Safety Verification of Chiron IR
+\title{\fontsize{43pt}{9pt}\selectfont Safety Verification of Chiron IR
 using Constrained Horn Clauses}
 
-\author{Aditi Khandelia \and Arush Upadhyaya \and Kushagra Srivastava}
-
+\author{\fontsize{30}{9pt}\selectfont Aditi Khandelia \and Arush Upadhyaya \and Kushagra Srivastava}
 % ====================
 % Footer (optional)
 % ====================
@@ -81,23 +81,12 @@ using Constrained Horn Clauses}
 \addtobeamertemplate{headline}{}
 {
     \begin{tikzpicture}[remember picture,overlay]
-        \node [anchor=north west, inner sep=2cm] at ([xshift=0.0cm,yshift=2.3cm]current page.north west)
+        \node [anchor=north west, inner sep=2cm] at ([xshift=-1.0cm,yshift=2.1cm]current page.north west)
         {\includegraphics[height=5.8cm]{logos/iitk_logo.png}};
-        % \node [anchor=north east, inner sep=2cm] at ([xshift=0.0cm,yshift=1.0cm]current page.north east)
-        % {\includegraphics[height=3.5cm]{logos/cs-logo-white.png}}
     \end{tikzpicture}
 }
 
 \begin{frame}[t]
-
-% ====== ROW 1: Introduction (full width) ======
-% \begin{columns}[t]
-% \separatorcolumn
-% \begin{column}{\fullwidth}
-  
-% \end{column}
-% \separatorcolumn
-% \end{columns}
 
 % ====== ROW 2: Base Flow | Design Choices (two equal columns) ======
 \begin{columns}[t]
