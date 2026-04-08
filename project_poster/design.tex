@@ -1,7 +1,6 @@
 \definecolor{designblue}{RGB}{222,236,248}
 \definecolor{creambox}{RGB}{255,247,232}
 
-\small
 \setlength{\tabcolsep}{3pt}
 \renewcommand{\arraystretch}{1.2}
 
@@ -69,7 +68,7 @@ Lookup expansion must remain bounded to control CHC size; failure to prove grid 
 \draw[->] (d1.south) -- node[midway, above, sloped, fill=white, inner sep=1pt] {\footnotesize \texttt{no}} (nL.north);
 \draw[->] (d1.south) -- node[midway, above, sloped, fill=white, inner sep=1pt] {\footnotesize \texttt{yes}} (nR.north);
 \end{tikzpicture}
-\end{minipage}\hfill
+\end{minipage}\hspace{0.5cm}
 \begin{minipage}[t]{0.48\linewidth}
 \centering
 \begin{tikzpicture}[font=\small, line width=0.5pt, baseline=(ex1.north)]
@@ -98,7 +97,7 @@ That shrinks the CHC system and avoids the heading-safety timeout seen in NONE.\
 \end{minipage}
 \end{minipage}
 
-\vspace{0.6em}
+\vspace{0.1em}
 {\centering\large\textbf{Repeat-Loop Summarization}\par}
 \noindent
 \begin{minipage}[t]{0.48\linewidth}
