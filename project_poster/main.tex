@@ -34,9 +34,10 @@
 }
 
 % Heading size overrides (~125%): headings only, body text unchanged
-\setbeamerfont{headline title}{size=\veryHuge,series=\bfseries}
-\setbeamerfont{headline author}{size=\Large}
-\setbeamerfont{headline institute}{size=\LARGE}
+\setbeamerfont{headline}{family=\Lato}
+\setbeamerfont{headline title}{family=\Lato,size=\veryHuge,series=\bfseries}
+\setbeamerfont{headline author}{family=\Lato,size=\Large}
+\setbeamerfont{headline institute}{family=\Lato,size=\LARGE,series=\bfseries}
 \setbeamerfont{block title}{family=\Lato,size=\LARGE,series=\bfseries}
 \setbeamerfont{heading}{size=\Large,series=\bfseries}
 \setbeamercolor{block title}{fg=red,bg=white}
@@ -74,7 +75,7 @@ using Constrained Horn Clauses}
 % Footer bar with department line
 \setbeamertemplate{footline}{%
   \begin{beamercolorbox}[wd=\paperwidth,ht=3.25ex,dp=1.2ex,center]{headline}%
-    {\usebeamerfont{headline author}\fontsize{20pt}{22pt}\selectfont\usebeamercolor[fg]{headline author}Department of Computer Science and Engineering - CS335 Project}
+    {\usebeamerfont{headline author}\fontsize{20pt}{22pt}\selectfont\bfseries\usebeamercolor[fg]{headline author}Department of Computer Science and Engineering - CS335 Project}
   \end{beamercolorbox}%
 }
 
