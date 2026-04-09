@@ -4,6 +4,6 @@
   \item \textbf{Recursive loop summarization:} For perfectly nested loops, summarize the inner loop into a single affine state transformer, then summarize the outer loop, which drastically reduces the CHC clause count.
   \item \textbf{User-specified focus variables (\texttt{focus\_vars}):} Let users name the variables most relevant to a property so the solver reasons over a smaller slice of the state.
   \item \textbf{Semantic property helpers:} Replace raw property strings with domain-specific helpers such as \texttt{heading\_in(range)}, \texttt{position\_in\_box(...)}, \texttt{pen\_is\_down()} for a friendlier API.
-  \item \textbf{Variable domain declarations:} Extend \texttt{specific} mode to accept intervals or sets of initial values rather than a single concrete assignment.
+  \item \textbf{Variable domain declarations:} Extend \texttt{specific} mode to accept intervals or sets of initial values.
 \end{itemize}
 

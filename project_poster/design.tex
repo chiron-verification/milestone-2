@@ -6,7 +6,6 @@
 \renewcommand{\arraystretch}{1.2}
 \vspace{-0.5cm}
 \heading{Design Choices}
-\vspace{-0.2cm}
 This section summarizes the principal modeling and solver choices adopted in the verifier.
 
 \begin{itemize}
@@ -20,7 +19,7 @@ This section summarizes the principal modeling and solver choices adopted in the
 \begin{tabular}{
   >{\raggedright\arraybackslash\columncolor{designblue}}p{0.2\linewidth}
   p{0.39\linewidth}
-  p{0.35\linewidth}
+  >{\setlength{\leftskip}{12pt}\setlength{\parindent}{0pt}\raggedright\arraybackslash}p{0.33\linewidth}
 }
 \rowcolor{designblue}
 \textbf{Design Choice} & \textbf{Benefit} & \textbf{Tradeoff} \\
@@ -83,6 +82,7 @@ Lookup expansion must remain bounded to control CHC size; failure to prove grid 
 \draw[->] (d1.south) -- node[above, sloped, fill=white, inner sep=1pt] {\scriptsize yes} (nR.north);
 \end{tikzpicture}
 \end{minipage}%
+\hfill
 \begin{minipage}[t]{0.50\linewidth}
 \vspace{0pt}
 \colorbox{gray!12}{%
@@ -105,7 +105,7 @@ Lookup expansion must remain bounded to control CHC size; failure to prove grid 
 \end{tabular}
 
 \vspace{0.6em}
-\small\textit{Why:} \texttt{:t} can only be \texttt{30} or \texttt{45}, so both branches stay on the 15-degree heading grid. The divisibility check \texttt{(n \% 15 == 0)} is resolved statically on numeric literals, without adding extra arithmetic constraints to Z3. Under BASIC, this turn is marked safe and its \texttt{BadHeading} rule is not emitted. That shrinks the CHC system and avoids the heading-safety timeout seen in NONE.
+\small\textit{Why:} \texttt{:t} can only be \texttt{30} or \texttt{45}, so both branches stay on the 15-degree heading grid. The divisibility check \texttt{(n \% 15 == 0)} is resolved statically on numeric literals, without adding extra arithmetic constraints to Z3. Under BASIC, this turn is marked safe and its \texttt{BadHeading} rule is not emitted.
 \end{minipage}
 
 % \vspace{0.2em}

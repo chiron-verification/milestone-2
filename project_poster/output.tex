@@ -1,6 +1,4 @@
 % -- Verifier Outputs ----------------------------------------------------------
-\heading{Verifier Outputs}
-
 Each \texttt{CHC\_Verification()} call returns a verdict per property:
 
 
@@ -11,3 +9,10 @@ Each \texttt{CHC\_Verification()} call returns a verdict per property:
 \textcolor{orange!70!black}{[UNKNOWN]} Property 'heading': solver timed out.\\[0.3em]
 \normalfont\itshape build: 0.094 s \enspace solve: 0.03 s,\ 1.74 s,\ 60.0 s
 \end{minipage}}
+
+\begin{itemize}
+    \item \textcolor{green!50!black}{\texttt{[PASSED]}}: the property is an invariant.
+    \item \textcolor{red!70!black}{\texttt{[FAILED]}}: a counterexample was found.
+    \item \textcolor{orange!70!black}{\texttt{[UNKNOWN]}}: the solver timed out, or returned an inconclusive result.
+\end{itemize}
+The output also includes the time taken for building the verification conditions, and for solving property.

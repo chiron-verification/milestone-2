@@ -37,8 +37,9 @@
 \setbeamerfont{headline title}{size=\veryHuge,series=\bfseries}
 \setbeamerfont{headline author}{size=\Large}
 \setbeamerfont{headline institute}{size=\LARGE}
-\setbeamerfont{block title}{size=\LARGE,series=\bfseries}
+\setbeamerfont{block title}{family=\Lato,size=\LARGE,series=\bfseries}
 \setbeamerfont{heading}{size=\Large,series=\bfseries}
+\setbeamercolor{block title}{fg=red,bg=white}
 
 % ====================
 % Lengths
@@ -65,13 +66,17 @@
 \title{\fontsize{43pt}{9pt}\selectfont Safety Verification of Chiron IR
 using Constrained Horn Clauses}
 
-\author{\fontsize{30}{9pt}\selectfont Aditi Khandelia \and Arush Upadhyaya \and Kushagra Srivastava}
+\author{\fontsize{30}{9pt}\selectfont Aditi Khandelia (220061) \and Arush Upadhyaya (220213) \and Kushagra Srivastava (220573)}
 % ====================
 % Footer (optional)
 % ====================
 
-% Footer removed
-\setbeamertemplate{footline}{}
+% Footer bar with department line
+\setbeamertemplate{footline}{%
+  \begin{beamercolorbox}[wd=\paperwidth,ht=3.25ex,dp=1.2ex,center]{headline}%
+    {\usebeamerfont{headline author}\fontsize{20pt}{22pt}\selectfont\usebeamercolor[fg]{headline author}Department of Computer Science and Engineering - CS335 Project}
+  \end{beamercolorbox}%
+}
 
 % ====================
 % Body
@@ -131,7 +136,7 @@ using Constrained Horn Clauses}
 \end{column}
 \separatorcolumn
 \begin{column}{\halfwidth}
-  \begin{block}{Future Works}
+  \begin{block}{Future Work}
     \input{future.tex}
   \end{block}
 \end{column}
