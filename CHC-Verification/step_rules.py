@@ -11,17 +11,19 @@ def cos_sin_exact_z3(h, i):
     sin_expr = RealVal(0)
     for deg in range(345, -1, -15):
         cos_f, sin_f = _MULT15_VALUES[deg]
-        cos_expr = If(h == RealVal(deg),
+        cos_expr = If(h == IntVal(deg),
                       RealVal(f"{cos_f.numerator}/{cos_f.denominator}"),
                       cos_expr)
-        sin_expr = If(h == RealVal(deg),
+        sin_expr = If(h == IntVal(deg),
                       RealVal(f"{sin_f.numerator}/{sin_f.denominator}"),
                       sin_expr)
     return cos_expr, sin_expr, BoolVal(True)
 
 def normalize_heading(h):
-    k = ToInt(h / RealVal(360))
-    return h - RealVal(360) * ToReal(k)
+    return h % IntVal(360)
+
+def _to_int_expr(expr):
+    return expr if expr.sort() == IntSort() else ToInt(expr)
 
 def _env_from_state(state, symbol_table, counter_table):
     env = {}
@@ -36,7 +38,7 @@ def _env_from_state(state, symbol_table, counter_table):
 
 def chiron_expr_to_z3_env(expr, env):
     if isinstance(expr, ChironAST.Num):
-        return RealVal(expr.val)
+        return IntVal(expr.val)
     if isinstance(expr, ChironAST.Var):
         return env[expr.varname[1:]]
     if isinstance(expr, ChironAST.Sum):
@@ -69,10 +71,10 @@ def apply_instr_state_only(instr, fp, Inv, state, next_state, symbol_table, coun
             var_name = lvar.varname[1:]
             if var_name in symbol_table:
                 var_index = list(symbol_table.keys()).index(var_name)
-                next_state_user_vars[var_index] = expr_z3
+                next_state_user_vars[var_index] = _to_int_expr(expr_z3)
             elif var_name in counter_table:
                 counter_index = list(counter_table.keys()).index(var_name)
-                next_state_user_vars[len(symbol_table) + counter_index] = expr_z3
+                next_state_user_vars[len(symbol_table) + counter_index] = _to_int_expr(expr_z3)
             else:
                 print("Error: Variable " + var_name + " not found in symbol table.")
                 sys.exit(1)
@@ -95,10 +97,12 @@ def apply_instr_state_only(instr, fp, Inv, state, next_state, symbol_table, coun
             next_state_xcor = state[1] - expr_z3 * cos_h
             next_state_ycor = state[2] - expr_z3 * sin_h
         elif direction == "left":
-            next_state_heading = normalize_heading(state[3] + expr_z3)
+            turn_int = _to_int_expr(expr_z3)
+            next_state_heading = normalize_heading(state[3] + turn_int)
             bad_heading_cond = Not(heading_on_grid(next_state_heading))
         elif direction == "right":
-            next_state_heading = normalize_heading(state[3] - expr_z3)
+            turn_int = _to_int_expr(expr_z3)
+            next_state_heading = normalize_heading(state[3] - turn_int)
             bad_heading_cond = Not(heading_on_grid(next_state_heading))
         else:
             print("Error: Invalid direction in MoveCommand.")
@@ -233,7 +237,7 @@ def chiron_expr_to_z3(expr, fp, Inv, state, next_state, symbol_table, counter_ta
             sys.exit(1)
     elif isinstance(expr, ChironAST.Value):
         if isinstance(expr, ChironAST.Num):
-            return RealVal(expr.val)
+            return IntVal(expr.val)
         elif isinstance(expr, ChironAST.Var):
             var_name = expr.varname
             var_name = var_name[1:]
@@ -271,13 +275,13 @@ def chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, BadHeading, state,
             var_name = var_name[1:] # Strip the colon
             if var_name in symbol_table:
                 var_index = list(symbol_table.keys()).index(var_name)
-                next_state_user_vars[var_index] = expr_z3
+                next_state_user_vars[var_index] = _to_int_expr(expr_z3)
                 next_state_tuple = (next_pc, next_state_xcor, next_state_ycor, next_state_heading, next_state_pendown, *next_state_user_vars)
                 rule = Implies(Inv(*current_state), Inv(*next_state_tuple))
                 return rule, None, None
             elif var_name in counter_table:
                 counter_index = list(counter_table.keys()).index(var_name)
-                next_state_user_vars[len(symbol_table) + counter_index] = expr_z3
+                next_state_user_vars[len(symbol_table) + counter_index] = _to_int_expr(expr_z3)
                 next_state_tuple = (next_pc, next_state_xcor, next_state_ycor, next_state_heading, next_state_pendown, *next_state_user_vars)
                 rule = Implies(Inv(*current_state), Inv(*next_state_tuple))
                 return rule, None, None
@@ -339,12 +343,14 @@ def chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, BadHeading, state,
             trig_constraints = BoolVal(True)
             next_state_xcor = state[1]
             next_state_ycor = state[2]
-            next_state_heading = normalize_heading(state[3] + expr_z3)
+            turn_int = _to_int_expr(expr_z3)
+            next_state_heading = normalize_heading(state[3] + turn_int)
         elif direction == "right":
             trig_constraints = BoolVal(True)
             next_state_xcor = state[1]
             next_state_ycor = state[2]
-            next_state_heading = normalize_heading(state[3] - expr_z3)
+            turn_int = _to_int_expr(expr_z3)
+            next_state_heading = normalize_heading(state[3] - turn_int)
         else:
             print("Error: Invalid direction in MoveCommand.")
             sys.exit(1)

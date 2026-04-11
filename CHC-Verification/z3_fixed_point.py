@@ -12,10 +12,10 @@ def z3_fixed_point_invariant_generation(ir, mode, optimization_level=Optimizatio
             IntSort(), # pc
             RealSort(), # xcor
             RealSort(), # ycor
-            RealSort(), # heading
+            IntSort(), # heading
             BoolSort(), # pendown
-            *[RealSort() for _ in symbol_table], # user_variable
-            *[RealSort() for _ in counter_table], # loop_counter
+            *[IntSort() for _ in symbol_table], # user_variable
+            *[IntSort() for _ in counter_table], # loop_counter
             BoolSort()
         )
 
@@ -25,14 +25,14 @@ def z3_fixed_point_invariant_generation(ir, mode, optimization_level=Optimizatio
         xcor_prime = Real('xcor_prime')
         ycor = Real('ycor')
         ycor_prime = Real('ycor_prime')
-        heading = Real('heading')
-        heading_prime = Real('heading_prime')
+        heading = Int('heading')
+        heading_prime = Int('heading_prime')
         pendown = Bool('pendown')
         pendown_prime = Bool('pendown_prime')
         user_variables = [entry['z3_var'] for entry in symbol_table.values()]
-        user_variables_prime = [Real(f"{entry['var_name']}_prime") for entry in symbol_table.values()]
+        user_variables_prime = [Int(f"{entry['var_name']}_prime") for entry in symbol_table.values()]
         loop_counters = [entry['z3_var'] for entry in counter_table.values()]
-        loop_counters_prime = [Real(f"{entry['counter_name']}_prime") for entry in counter_table.values()]
+        loop_counters_prime = [Int(f"{entry['counter_name']}_prime") for entry in counter_table.values()]
 
         state = (pc, xcor, ycor, heading, pendown, *user_variables, *loop_counters)
         next_state = (pc_prime, xcor_prime, ycor_prime, heading_prime, pendown_prime, *user_variables_prime, *loop_counters_prime)
@@ -44,10 +44,10 @@ def z3_fixed_point_invariant_generation(ir, mode, optimization_level=Optimizatio
             IntSort(),      # pc
             RealSort(),     # xcor
             RealSort(),     # ycor
-            RealSort(),     # heading
+            IntSort(),      # heading
             BoolSort(),     # pendown
-            *[RealSort() for _ in symbol_table],
-            *[RealSort() for _ in counter_table],
+            *[IntSort() for _ in symbol_table],
+            *[IntSort() for _ in counter_table],
             BoolSort()
         )
 

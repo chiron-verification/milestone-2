@@ -20,10 +20,10 @@ def z3_fixed_point_object_with_start_state_set(ir, mode, params=None, optimizati
             IntVal(0), # pc
             RealVal(0), # xcor
             RealVal(0), # ycor
-            RealVal(0), # heading
+            IntVal(0), # heading
             BoolVal(False), # pendown
-            *[RealVal(0) for _ in symbol_table], # user variables initialized to 0
-            *[RealVal(0) for _ in counter_table]  # loop counters initialized to 0
+            *[IntVal(0) for _ in symbol_table], # user variables initialized to 0
+            *[IntVal(0) for _ in counter_table]  # loop counters initialized to 0
         )
 
         fp.fact(Inv(*start_state))
@@ -32,7 +32,7 @@ def z3_fixed_point_object_with_start_state_set(ir, mode, params=None, optimizati
     elif (mode == "universal"):
         xcor, ycor, heading = state[1], state[2], state[3]
         user_vars = list(state[5 : 5 + len(symbol_table)])
-        counter_zeros = [RealVal(0) for _ in counter_table]
+        counter_zeros = [IntVal(0) for _ in counter_table]
         quantified = [xcor, ycor, heading] + user_vars
         init_fact = Inv(IntVal(0), 
                         xcor, 
@@ -42,8 +42,7 @@ def z3_fixed_point_object_with_start_state_set(ir, mode, params=None, optimizati
                         *user_vars, 
                         *counter_zeros)
 
-        int_user_vars = And([IsInt(v) for v in user_vars])
-        init_guard = And(heading_on_grid(heading), int_user_vars)
+        init_guard = heading_on_grid(heading)
         fp.rule(ForAll(quantified, Implies(init_guard, init_fact)))
         print("Added universal initial rule: xcor, ycor, and user variables are unconstrained; user variables are integers; heading is constrained to be a multiple of 15 degrees, and pc=0, pendown=True, counters=0.")
 
@@ -56,10 +55,10 @@ def z3_fixed_point_object_with_start_state_set(ir, mode, params=None, optimizati
             IntVal(0),
             RealVal(0),
             RealVal(0),
-            RealVal(0),
+            IntVal(0),
             BoolVal(False),
-            *[RealVal(params[var_name]) for var_name in symbol_table],
-            *[RealVal(0) for _ in counter_table]
+            *[IntVal(int(params[var_name])) for var_name in symbol_table],
+            *[IntVal(0) for _ in counter_table]
         )
 
         fp.fact(Inv(*start_state))

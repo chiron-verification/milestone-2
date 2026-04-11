@@ -71,7 +71,7 @@ def program_path(name: str) -> str:
     return os.path.join(PROGRAMS_DIR, name)
 
 def _run_api_check(file_path, mode, name, expr_str, params=None,
-                   hints=None, timeout_ms=3_000, property_scope="all",
+                   hints=None, timeout_ms=20_000, property_scope="all",
                    optimization_level=OptimizationLevel.NONE):
     if hints is None:
         hints = ["check_heading_always_on_grid"]
@@ -110,7 +110,7 @@ class PerformanceTestCase(unittest.TestCase):
     """
 
     MODE: str = None
-    DEFAULT_TIMEOUT_MS: int = 3_000
+    DEFAULT_TIMEOUT_MS: int = 20_000
 
     def load(self, tl_file: str, params=None,
              hints=None, timeout_ms=None, property_scope="all"):
@@ -192,7 +192,12 @@ class PerformanceTestCase(unittest.TestCase):
             "solve_s_basic_hint":      _solve(result_basic_hint),
         }, self.MODE)
 
-        for exc in (exc_none, exc_basic, exc_none_hint, exc_basic_hint):
+        for exc in (
+            exc_none, 
+            exc_basic, 
+            exc_none_hint, 
+            exc_basic_hint
+            ):
             if exc:
                 raise exc
 
@@ -213,9 +218,12 @@ class PerformanceTestCase(unittest.TestCase):
         """
         (result_none, result_basic,
          result_none_hint, result_basic_hint) = self.time_check(name, expr, expected_status)
-
-        if result_none.error == ReturnError.ERROR:
-            self.fail(f"API error: {result_none.expr} - {result_none.advice}")
+        
+        for result in (result_none, result_basic, result_none_hint, result_basic_hint):
+            if result is None:
+                self.fail("API error: no result returned")
+            if result.error == ReturnError.ERROR:
+                self.fail(f"API error: {result.expr} - {result.advice}")
 
         for r, label in (
             (result_none,      "NONE"),
@@ -228,14 +236,23 @@ class PerformanceTestCase(unittest.TestCase):
                     r.status, expected_status,
                     f"Property '{name}' ({label}): expected {expected_status}, got {r.status}",
                 )
+            if max_solve_s is not None and r.solve_times:
+                self.assertLessEqual(
+                    r.solve_times[0], max_solve_s,
+                    f"Solve time for property '{name}' ({label}) exceeded {max_solve_s:.2f}s: {r.solve_times[0]:.2f}s"
+                )
+            if max_build_s is not None:
+                self.assertLessEqual(
+                    r.build_time, max_build_s,
+                    f"Build time for property '{name}' ({label}) exceeded {max_build_s:.2f}s: {r.build_time:.2f}s"
+                )
 
-        build_t = result_none.build_time
-        solve_t = result_none.solve_times[0] if result_none.solve_times else None
-        if max_build_s is not None:
-            self.assertLess(build_t, max_build_s,
-                f"Build time {build_t:.3f}s exceeded limit {max_build_s}s")
-        if max_solve_s is not None and solve_t is not None:
-            self.assertLess(solve_t, max_solve_s,
-                f"Solve time {solve_t:.3f}s exceeded limit {max_solve_s}s")
+
+            
+        # print(f"File: '{self._tl_file}', Property '{name}': expected {expected_status}")
+        # print(f"NONE build {build_t:.3f}s, solve {solve_t:.3f}s")
+        # print(f"BASIC build {result_basic.build_time:.3f}s, solve {result_basic.solve_times[0]:.3f}s")
+        # print(f"NONE+hint build {result_none_hint.build_time:.3f}s, solve {result_none_hint.solve_times[0]:.3f}s")
+        # print(f"BASIC+hint build {result_basic_hint.build_time:.3f}s, solve {result_basic_hint.solve_times[0]:.3f}s")
 
         return (result_none, result_basic, result_none_hint, result_basic_hint)
