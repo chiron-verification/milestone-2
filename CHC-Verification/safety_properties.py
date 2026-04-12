@@ -31,6 +31,8 @@ class ReturnValue:
 class Hints(StrEnum):
     CHECK_HEADING_ALWAYS_ON_GRID = auto()
     HEADING_ON_GRID_ALWAYS = auto()
+    CHECK_TERMINATION = auto()
+    ALWAYS_TERMINATES = auto()
 
 class Property:
     def __init__(self, name, property_expr):
@@ -62,7 +64,7 @@ def check_property(fp, Inv, state, symbol_table, counter_table, property, mode, 
         print(f"Property '{property_name}' status is UNKNOWN. Solver returned: {result}")
         property.status = 'UNKNOWN'
 
-def CHC_Verification(file_name, mode, user_properties, params=None, property_scope="all", hints=["check_heading_always_on_grid"], timeout_ms=60_000, optimization_level=OptimizationLevel.NONE):
+def CHC_Verification(file_name, mode, user_properties, params=None, property_scope="all", hints=["check_heading_always_on_grid", "check_termination"], timeout_ms=60_000, optimization_level=OptimizationLevel.NONE):
 
     return_safety = ReturnValue()
 
@@ -158,23 +160,26 @@ def CHC_Verification(file_name, mode, user_properties, params=None, property_sco
                 return return_safety
 
     if property_scope == "terminating":
-        fp.set(**{"spacer.native_mbp": False})
         term_guard = (state[0] == IntVal(terminal_pc))
-        term_base = And(Inv(*state), term_guard) if assumptions is None else And(Inv(*state), assumptions, term_guard)
-        term_vars = z3util.get_vars(term_base)
-        term_res = fp.query(Exists(term_vars, term_base))
-        if term_res == unsat:
-            return_safety.expr = "No terminating reachable states."
-            return_safety.advice = "Program may not terminate; terminating-scope property is UNKNOWN."
-            return_safety.error = ReturnError.SUCCESS
-            return_safety.status = 'UNKNOWN'
-            return return_safety
-        if term_res != sat:
-            return_safety.expr = f"Termination reachability UNKNOWN: {term_res}"
-            return_safety.advice = "Terminating-scope property is UNKNOWN."
-            return_safety.error = ReturnError.SUCCESS
-            return_safety.status = 'UNKNOWN'
-            return return_safety
+        if Hints.ALWAYS_TERMINATES in parsed_hints:
+            print("Hint: program always terminates. Skipping termination reachability check.")
+        else:
+            fp.set(**{"spacer.native_mbp": False})
+            term_base = And(Inv(*state), term_guard) if assumptions is None else And(Inv(*state), assumptions, term_guard)
+            term_vars = z3util.get_vars(term_base)
+            term_res = fp.query(Exists(term_vars, term_base))
+            if term_res == unsat:
+                return_safety.expr = "No terminating reachable states."
+                return_safety.advice = "Program may not terminate; terminating-scope property is UNKNOWN."
+                return_safety.error = ReturnError.SUCCESS
+                return_safety.status = 'UNKNOWN'
+                return return_safety
+            if term_res != sat:
+                return_safety.expr = f"Termination reachability UNKNOWN: {term_res}"
+                return_safety.advice = "Terminating-scope property is UNKNOWN."
+                return_safety.error = ReturnError.SUCCESS
+                return_safety.status = 'UNKNOWN'
+                return return_safety
         assumptions = term_guard if assumptions is None else And(assumptions, term_guard)
 
     eval_context = {
