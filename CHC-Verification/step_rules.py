@@ -430,8 +430,14 @@ def chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, BadHeading, state,
         print("Error: Unrecognized instruction type.")
         sys.exit(1)
 
-def add_step_rules_to_fixed_point(ir, mode, param=None, optimization_level=OptimizationLevel.NONE):
-    fp, BadHeading, Inv, state, next_state, symbol_table, counter_table = z3_fixed_point_object_with_start_state_set(ir, mode, params=param, optimization_level=optimization_level)
+def add_step_rules_to_fixed_point(ir, mode, param=None, input_ranges=None, optimization_level=OptimizationLevel.NONE):
+    fp, BadHeading, Inv, state, next_state, symbol_table, counter_table = z3_fixed_point_object_with_start_state_set(
+        ir,
+        mode,
+        params=param,
+        input_ranges=input_ranges,
+        optimization_level=optimization_level,
+    )
 
     print("\n========== Step 4 ==========")
 

@@ -3,7 +3,36 @@ import sys
 from z3 import *
 from heading_grid import heading_on_grid
 
-def z3_fixed_point_object_with_start_state_set(ir, mode, params=None, optimization_level=OptimizationLevel.NONE):
+def _normalize_input_ranges(input_ranges, symbol_table):
+    if input_ranges is None:
+        return {}
+    if not isinstance(input_ranges, dict):
+        raise ValueError("input_ranges must be a dict mapping var names to ranges.")
+
+    normalized = {}
+    for var_name, spec in input_ranges.items():
+        if var_name not in symbol_table:
+            raise ValueError(f"Unknown input variable in input_ranges: {var_name}")
+        if spec is None:
+            continue # unconstrained variable
+        if isinstance(spec, int):
+            normalized[var_name] = (spec, spec) # treat single int as fixed value
+            continue
+        elif isinstance(spec, (list, tuple)) and len(spec) == 2:
+            lo, hi = spec
+            if not isinstance(lo, int) or not isinstance(hi, int):
+                raise ValueError(f"Invalid range for {var_name}: bounds must be integers.")
+            if lo > hi:
+                raise ValueError(f"Invalid range for {var_name}: lower bound > upper bound.")
+            normalized[var_name] = (lo, hi)
+            continue
+        raise ValueError(
+            f"Invalid range for {var_name}: use an int, (lo, hi), or None."
+        )
+
+    return normalized
+
+def z3_fixed_point_object_with_start_state_set(ir, mode, params=None, input_ranges=None, optimization_level=OptimizationLevel.NONE):
     Inv, BadHeading, state, next_state, symbol_table, counter_table = z3_fixed_point_invariant_generation(ir, mode, optimization_level=optimization_level)
     print("Obtained the invariant relation, state variables, and symbol/counter tables from the IR.")
 
@@ -16,6 +45,8 @@ def z3_fixed_point_object_with_start_state_set(ir, mode, params=None, optimizati
     print("Registered the BadHeading relation for checking heading grid violations.")
 
     if (mode == "default"):
+        if input_ranges is not None:
+            raise ValueError("input_ranges is only supported in universal mode.")
         start_state = (
             IntVal(0), # pc
             RealVal(0), # xcor
@@ -42,11 +73,24 @@ def z3_fixed_point_object_with_start_state_set(ir, mode, params=None, optimizati
                         *user_vars, 
                         *counter_zeros)
 
+        normalized_ranges = _normalize_input_ranges(input_ranges, symbol_table)
+        range_constraints = []
+        for var_name, (lo, hi) in normalized_ranges.items():
+            z3_var = symbol_table[var_name]["z3_var"]
+            if lo == hi:
+                range_constraints.append(z3_var == IntVal(lo))
+            else:
+                range_constraints.append(And(z3_var >= IntVal(lo), z3_var <= IntVal(hi)))
+
         init_guard = heading_on_grid(heading)
+        if range_constraints:
+            init_guard = And(init_guard, *range_constraints)
         fp.rule(ForAll(quantified, Implies(init_guard, init_fact)))
         print("Added universal initial rule: xcor, ycor, and user variables are unconstrained; user variables are integers; heading is constrained to be a multiple of 15 degrees, and pc=0, pendown=True, counters=0.")
 
     elif (mode == "specific"):
+        if input_ranges is not None:
+            raise ValueError("input_ranges is only supported in universal mode.")
         for var_name in symbol_table:
             if var_name not in params:
                 params[var_name] = 0.0

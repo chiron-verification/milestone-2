@@ -64,7 +64,7 @@ def check_property(fp, Inv, state, symbol_table, counter_table, property, mode, 
         print(f"Property '{property_name}' status is UNKNOWN. Solver returned: {result}")
         property.status = 'UNKNOWN'
 
-def CHC_Verification(file_name, mode, user_properties, params=None, property_scope="all", hints=["check_heading_always_on_grid", "check_termination"], timeout_ms=60_000, optimization_level=OptimizationLevel.NONE):
+def CHC_Verification(file_name, mode, user_properties, params=None, input_ranges=None, property_scope="all", hints=["check_heading_always_on_grid", "check_termination"], timeout_ms=60_000, optimization_level=OptimizationLevel.NONE):
 
     return_safety = ReturnValue()
 
@@ -121,7 +121,19 @@ def CHC_Verification(file_name, mode, user_properties, params=None, property_sco
     t_build_start = time.perf_counter()
     ir = astGenPass().visit(getParseTree(file_name))
     terminal_pc = len(ir)
-    fp, Inv, BadHeading, state, next_state, symbol_table, counter_table, turn_safe_map = add_step_rules_to_fixed_point(ir, mode, param=params, optimization_level=optimization_level)
+    try:
+        fp, Inv, BadHeading, state, next_state, symbol_table, counter_table, turn_safe_map = add_step_rules_to_fixed_point(
+            ir,
+            mode,
+            param=params,
+            input_ranges=input_ranges,
+            optimization_level=optimization_level,
+        )
+    except ValueError as e:
+        return_safety.expr = f"Invalid input_ranges: {e}"
+        return_safety.advice = "Provide a dict like {'x': (0, 10), 'y': 5, 'z': None} for universal mode."
+        return_safety.error = ReturnError.ERROR
+        return return_safety
     fp.set(timeout=timeout_ms)
     return_safety.build_time = time.perf_counter() - t_build_start
     print("Obtained fixed point object and invariant predicate. Ready to check properties.")
