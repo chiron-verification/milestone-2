@@ -174,6 +174,76 @@ def summarize_loop_effect(ir, loop_desc, fp, Inv, state, next_state, symbol_tabl
     
     return current_state_no_pc, bad_rules
 
+def _sub_state(expr, state_vars, new_vals):
+    """Substitute state_vars[i] -> new_vals[i] in a Z3 expression."""
+    return substitute(expr, *zip(state_vars, new_vals))
+
+def summarize_loop_effect_nested(ir, loop_desc, fp, Inv, state, next_state, symbol_table, counter_table, turn_safe_map, inner_summaries):
+    """
+    Like summarize_loop_effect but handles nested summarized inner loops.
+
+    inner_summaries: dict mapping inner loop init_idx ->
+                     (exit_idx, state_no_pc_tuple, bad_rules_list)
+      where state_no_pc_tuple is a tuple of Z3 exprs in terms of state[1:],
+      and bad_rules_list is a list of (bad_cond, bad_state_no_pc, bad_pc)
+      also in terms of state[1:].
+
+    When an inner loop's init is encountered during body traversal the
+    pre-computed symbolic transformation is applied via Z3 substitution
+    instead of stepping through the inner loop's instructions one by one.
+    """
+    (init_idx, cond_idx, body_start, body_end, dec_idx, back_idx, exit_idx, counter_name, loop_count) = loop_desc
+
+    if loop_count > MAX_SUMMARIZE_ITERATIONS:
+        return None, []
+
+    state_vars = list(state[1:])
+    bad_rules = []
+    current_state = state
+
+    # Apply init instruction (counter assignment).
+    init_instr, _ = ir[init_idx]
+    current_state_no_pc, bad_rule = apply_instr_state_only(init_instr, fp, Inv, current_state, next_state, symbol_table, counter_table, init_idx)
+    if (bad_rule is not None) and (turn_safe_map is None or not turn_safe_map[init_idx]):
+        bad_rules.append((bad_rule, current_state_no_pc, init_idx + 1))
+    current_state = (state[0], *current_state_no_pc)
+
+    dec_instr = ir[dec_idx][0]
+
+    for _ in range(loop_count):
+        idx = body_start
+        while idx <= body_end:
+            if idx in inner_summaries:
+                inner_exit_idx, inner_snpc, inner_bad = inner_summaries[idx]
+                cur_no_pc = list(current_state[1:])
+                # Compose: substitute free state vars with the current state
+                # expressions in the pre-computed inner summary.
+                new_no_pc = tuple(_sub_state(e, state_vars, cur_no_pc) for e in inner_snpc)
+                # Remap the inner loop's bad-heading conditions the same way.
+                for (ib_cond, ib_snpc, ib_pc) in inner_bad:
+                    bad_rules.append((
+                        _sub_state(ib_cond, state_vars, cur_no_pc),
+                        tuple(_sub_state(e, state_vars, cur_no_pc) for e in ib_snpc),
+                        ib_pc,
+                    ))
+                current_state = (state[0], *new_no_pc)
+                idx = inner_exit_idx
+            else:
+                instr, _ = ir[idx]
+                current_state_no_pc, bad_rule = apply_instr_state_only(instr, fp, Inv, current_state, next_state, symbol_table, counter_table, idx)
+                if (bad_rule is not None) and (turn_safe_map is None or not turn_safe_map[idx]):
+                    bad_rules.append((bad_rule, current_state_no_pc, idx + 1))
+                current_state = (state[0], *current_state_no_pc)
+                idx += 1
+
+        # Apply decrement at end of each iteration.
+        current_state_no_pc, bad_rule = apply_instr_state_only(dec_instr, fp, Inv, current_state, next_state, symbol_table, counter_table, dec_idx)
+        if (bad_rule is not None) and (turn_safe_map is None or not turn_safe_map[dec_idx]):
+            bad_rules.append((bad_rule, current_state_no_pc, dec_idx + 1))
+        current_state = (state[0], *current_state_no_pc)
+
+    return tuple(current_state[1:]), bad_rules
+
 def chiron_expr_to_z3(expr, fp, Inv, state, next_state, symbol_table, counter_table):
     if isinstance(expr, ChironAST.ArithExpr):
         if isinstance(expr, ChironAST.BinArithOp):
@@ -442,16 +512,39 @@ def add_step_rules_to_fixed_point(ir, mode, param=None, input_ranges=None, optim
     print("\n========== Step 4 ==========")
 
     if optimization_level == OptimizationLevel.BASIC:
-        turn_safe_map = turn_safe(ir) 
+        turn_safe_map = turn_safe(ir)
         loops = find_repeat_loops(ir)
-        summarizable = [l for l in loops if is_summarizable_loop(ir, l)]
-        summarizable_by_init = {l[0]: l for l in summarizable}
+
+        # Sort by span (smallest = innermost) so inner loops are processed first.
+        loops_sorted = sorted(loops, key=lambda l: l[6] - l[0])
+
+        # Build summaries from innermost outward.  A loop is summarizable if
+        # its body (after treating already-summarized inner loops as atomic
+        # blocks) contains no ConditionCommands or non-unit jumps.
+        loop_summaries = {}       # init_idx -> (exit_idx, state_no_pc_tuple, bad_rules_list)
+        summarizable_by_init = {} # init_idx -> loop_desc
+
+        for loop_desc in loops_sorted:
+            _init, _cond, _bstart, _bend, _dec, _back, _exit, _cname, _cnt = loop_desc
+            # Collect summaries of inner loops whose init falls within this body.
+            inner_sums = {k: v for k, v in loop_summaries.items() if _bstart <= k <= _bend}
+            if is_summarizable_loop_nested(ir, loop_desc, {k: v[0] for k, v in inner_sums.items()}):
+                snpc, br = summarize_loop_effect_nested(
+                    ir, loop_desc, fp, Inv, state, next_state,
+                    symbol_table, counter_table, turn_safe_map, inner_sums
+                )
+                if snpc is not None:
+                    loop_summaries[_init] = (_exit, snpc, br)
+                    summarizable_by_init[_init] = loop_desc
+
         skip_indices = set()
-        for l in summarizable:
-            # Skip all the instruction in the body of the loop as well as the condition, decrement and jump instructions
-            skip_indices.update(range(l[0], l[6]))
+        for _init, ld in summarizable_by_init.items():
+            # Skip every instruction from init through back (i.e. up to but not
+            # including exit_idx) — the single summarized rule replaces them all.
+            skip_indices.update(range(ld[0], ld[6]))
     else:
         summarizable_by_init = {}
+        loop_summaries = {}
         skip_indices = set()
         turn_safe_map = None
 
@@ -459,38 +552,21 @@ def add_step_rules_to_fixed_point(ir, mode, param=None, input_ranges=None, optim
         if i in summarizable_by_init:
             loop_desc = summarizable_by_init[i]
             (init_idx, cond_idx, body_start, body_end, dec_idx, back_idx, exit_idx, counter_name, loop_count) = loop_desc
-            current_state_no_pc, bad_rules = summarize_loop_effect(ir, loop_desc, fp, Inv, state, next_state, symbol_table, counter_table, turn_safe_map)
-            if current_state_no_pc is None:
-                # Summarization skipped (too many iterations). Fall back to normal rules.
-                instr = stmt[0]
-                jump_target = stmt[1]
-                rule_true, rule_false, bad_rule = chiron_command_to_z3_rule(i, instr, jump_target, fp, Inv, BadHeading, state, next_state, symbol_table, counter_table, optimization_level, turn_safe_map)
-                rule_true_vars = z3util.get_vars(rule_true)
-                fp.rule(ForAll(rule_true_vars, rule_true))
-                print(f"Added rule for instruction at line {i}: {rule_true}")
-                if rule_false is not None:
-                    rule_false_vars = z3util.get_vars(rule_false)
-                    fp.rule(ForAll(rule_false_vars, rule_false))
-                    print(f"Added rule for instruction at line {i} (false branch): {rule_false}")
-                if bad_rule is not None:
-                    bad_rule_vars = z3util.get_vars(bad_rule)
-                    fp.rule(ForAll(bad_rule_vars, bad_rule))
-                    print(f"Added BadHeading rule for instruction at line {i}: {bad_rule}")
-            else:
-                current_state = (IntVal(i), *state[1:])
-                next_state_tuple = (IntVal(exit_idx), *current_state_no_pc)
-                rule = Implies(Inv(*current_state), Inv(*next_state_tuple))
-                rule_vars = z3util.get_vars(rule)
-                fp.rule(ForAll(rule_vars, rule))
-                print(f"Added summarized rule for loop starting at line {i}: {rule}")
-                for bad_cond, bad_state_no_pc, bad_pc in bad_rules:
-                    bad_rule_full = Implies(
-                        And(Inv(*current_state), bad_cond),
-                        BadHeading(IntVal(bad_pc), *bad_state_no_pc)
-                    )
-                    bad_rule_vars = z3util.get_vars(bad_rule_full)
-                    fp.rule(ForAll(bad_rule_vars, bad_rule_full))
-                    print(f"Added summarized BadHeading rule for loop starting at line {i}: {bad_rule_full}")
+            _, snpc, bad_rules = loop_summaries[i]
+            current_state = (IntVal(i), *state[1:])
+            next_state_tuple = (IntVal(exit_idx), *snpc)
+            rule = Implies(Inv(*current_state), Inv(*next_state_tuple))
+            rule_vars = z3util.get_vars(rule)
+            fp.rule(ForAll(rule_vars, rule))
+            print(f"Added summarized rule for loop starting at line {i}: {rule}")
+            for bad_cond, bad_state_no_pc, bad_pc in bad_rules:
+                bad_rule_full = Implies(
+                    And(Inv(*current_state), bad_cond),
+                    BadHeading(IntVal(bad_pc), *bad_state_no_pc)
+                )
+                bad_rule_vars = z3util.get_vars(bad_rule_full)
+                fp.rule(ForAll(bad_rule_vars, bad_rule_full))
+                print(f"Added summarized BadHeading rule for loop starting at line {i}: {bad_rule_full}")
 
         elif i in skip_indices:
             continue

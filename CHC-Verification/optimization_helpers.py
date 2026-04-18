@@ -223,3 +223,32 @@ def is_summarizable_loop(ir, loop_desc):
         if counter_name in str(instr):
             return False
     return True
+
+def is_summarizable_loop_nested(ir, loop_desc, summarized_inits):
+    """
+    Like is_summarizable_loop, but treats already-summarized inner loops as
+    opaque atomic blocks that can be skipped over.
+
+    summarized_inits: dict mapping inner loop init_idx -> inner loop exit_idx
+                      for loops that have already been summarized.
+    """
+    (init_idx, cond_idx, body_start, body_end, dec_idx, back_idx, exit_idx, counter_name, loop_count) = loop_desc
+    if not isinstance(loop_count, int) or loop_count <= 0:
+        return False
+    if loop_count > MAX_SUMMARIZE_ITERATIONS:
+        return False
+    idx = body_start
+    while idx <= body_end:
+        if idx in summarized_inits:
+            # Jump past this already-summarized inner loop.
+            idx = summarized_inits[idx]
+            continue
+        instr, jump = ir[idx]
+        if isinstance(instr, ChironAST.ConditionCommand) or isinstance(instr, ChironAST.AssertCommand):
+            return False
+        if jump != 1:
+            return False
+        if counter_name in str(instr):
+            return False
+        idx += 1
+    return True
