@@ -1,0 +1,478 @@
+\section*{Tests}
+\label{sec:tests}
+
+\subsection*{Correctness Tests}\label{subsec:correctness_tests}
+The correctness suite resides in
+\texttt{CHC-Verification/correctness\_tests/} and is executed with
+\texttt{pytest} over \texttt{unittest.TestCase}-based test classes. The fixture set includes 64 \texttt{.tl} programs across the three modes, covering a wide range of semantic properties and edge cases. These fixtue programs can be found in \texttt{CHC-Verification/correctness\_tests/programs/}.
+
+\subsubsection*{Evaluation modules and responsibilities}
+
+\begin{longtable}{p{0.20\textwidth} p{0.80\textwidth}}
+\toprule
+\textbf{File} & \textbf{Role in evaluation} \\
+\midrule
+\texttt{test\_default.py} & Validates concrete-start-state verification in \texttt{default} mode, including arithmetic, geometric, pen-state, directional, heading-grid, trigonometric, and nested-loop behaviors. \\
+\texttt{test\_specific.py} & Validates parameterized initialization in \texttt{specific} mode, with boundary-sensitive outcomes under user-supplied parameter dictionaries. \\
+\texttt{test\_universal.py} & Validates symbolic/unconstrained initialization in \texttt{universal} mode, API-level validation errors, heading-grid handling, and terminating-scope properties. \\
+\texttt{helpers.py} & Shared harness for loading programs, invoking \texttt{CHC\_Verification}, building assertion contexts, and standardizing property checks. \\
+\texttt{README.md} & Documents suite structure, mode coverage, fixture list, and execution commands. \\
+\bottomrule
+\end{longtable}
+
+\subsubsection*{Coverage snapshot}
+
+\begin{itemize}[leftmargin=1.5em]
+	\item Total collected correctness tests: \textbf{206}
+	\item Mode split: \textbf{46} (default), \textbf{70} (specific), \textbf{90} (universal)
+	\item Fixture programs in \texttt{programs/}: \textbf{64} \texttt{.tl} files
+	\item Explicitly skipped tests: \textbf{6} timeout-marked heading/trig-heavy scenarios
+\end{itemize}
+
+\subsubsection*{Category coverage across modes}
+
+\begin{itemize}[leftmargin=1.5em]
+	\item \textbf{Default mode:} arithmetic invariants, geometric bounds, pen-state properties, directional/heading checks, and advanced nested control-flow fixtures.
+	\item \textbf{Specific mode:} same semantic families under concrete parameter assignments, including multi-parameter and chained-update programs.
+	\item \textbf{Universal mode:} unconstrained initial-state reasoning, relational arithmetic properties, API-validation behavior, and terminating-scope checks.
+\end{itemize}
+
+\subsubsection*{How to run}
+
+\textbf{From repository root (recommended):}
+\begin{lstlisting}[style=terminal, language=bash]
+cd Chiron-Framework/ChironCore
+source .venv/bin/activate
+cd ../../CHC-Verification/correctness_tests
+pytest -q
+\end{lstlisting}
+
+\textbf{Useful variants:}
+\begin{lstlisting}[style=terminal, language=bash]
+# verbose mode
+pytest -v
+
+# collect-only sanity check
+pytest --collect-only -q
+
+# run one mode file
+pytest test_default.py -q
+
+# run one test class
+pytest test_specific.py::TestSpecificArithmetic -q
+
+# run one test case
+pytest test_universal.py::TestUniversalAPI::test_invalid_mode_error -q
+\end{lstlisting}
+
+\subsection*{Performance Tests}
+\label{sec:performance_tests}
+
+The CHC verification pipeline is benchmarked to stress-test solver scalability under various optimization levels. 
+The test suite resides in \noindent\textit{\small Folder: \texttt{CHC-Verification/performance\_tests}} and is executed with \texttt{pytest} using \texttt{pytest-xdist} for parallel execution.
+The fixture contains 21 \texttt{.tl} programs across the three modes and cover cases that can blow up the number of solver constraints. 
+The fixture programmes can be found in \noindent\textit{\small Folder: \texttt{CHC-Verification/performance\_tests/programs/}}.
+
+
+\subsubsection*{Test Infrastructure}
+
+The performance test suite is built on Python's \texttt{unittest} framework and reuses the shared helper infrastructure from Milestone~1. Each test case runs the verification pipeline across four configurations: two optimization levels (\texttt{NONE} and \texttt{BASIC}) combined with two hint modes (no hint, with hint).
+
+\begin{longtable}{p{0.28\textwidth} p{0.66\textwidth}}
+\toprule
+\textbf{File} & \textbf{Purpose} \\
+\midrule
+\texttt{tests/test\_default.py} & Performance benchmarks in \texttt{default} mode, testing loop scaling, nesting depth, wide state, branching density, trigonometric motion, and property complexity. \\
+\texttt{tests/test\_universal.py} & Performance benchmarks in \texttt{universal} mode with unconstrained initial states. \\
+\texttt{tests/test\_specific.py} & Performance benchmarks in \texttt{specific} mode using explicit parameter assignments. \\
+\texttt{tests/helpers.py} & Extended test infrastructure supporting timing measurements across all six configurations and CSV output generation. \\
+\texttt{perf\_results\_*.csv} & Raw timing data output files containing build times, solve times, and verdicts for each test case. \\
+\bottomrule
+\end{longtable}
+
+\subsubsection*{Benchmark Programs}
+
+The performance suite includes 21 benchmark programs organized into six categories:
+
+\begin{longtable}{p{0.24\textwidth} p{0.70\textwidth}}
+\toprule
+\textbf{Program file} & \textbf{Purpose in evaluation} \\
+\midrule
+\multicolumn{2}{l}{\textit{Loop Scaling (testing solver performance as loop iterations increase)}} \\
+\midrule
+\texttt{perf\_repeat\_10.tl} & Simple accumulator loop with 10 iterations; baseline for loop scaling. \\
+\texttt{perf\_repeat\_50.tl} & Same accumulator with 50 iterations; tests medium-scale loop invariants. \\
+\texttt{perf\_repeat\_100.tl} & Same accumulator with 100 iterations; tests large-scale loop invariants. \\
+\midrule
+\multicolumn{2}{l}{\textit{Nesting Depth (testing nested loop invariant synthesis)}} \\
+\midrule
+\texttt{perf\_deep\_nest\_3.tl} & Three-level nested loops ($4^3 = 64$ total iterations); produces chained counters $a$, $b$, $c$. \\
+\texttt{perf\_deep\_nest\_4.tl} & Four-level nested loops ($3^4 = 81$ total iterations); adds counter $d$ for deeper invariants. \\
+\midrule
+\multicolumn{2}{l}{\textit{Wide State (testing high-dimensional state tracking)}} \\
+\midrule
+\texttt{perf\_wide\_vars.tl} & Eight chained variables updated per iteration; tests 8-dimensional arithmetic invariants. \\
+\midrule
+\multicolumn{2}{l}{\textit{Branching Density (testing branching CFG complexity)}} \\
+\midrule
+\texttt{perf\_many\_branches.tl} & Six-iteration loop with four sequential if/else blocks per iteration; dense branching. \\
+\midrule
+\multicolumn{2}{l}{\textit{Trigonometric Motion (testing heading-dependent position updates)}} \\
+\midrule
+\texttt{perf\_trig\_10.tl} & \texttt{forward 10; right 90} repeated 10 times; tests trigonometric constraint scaling. \\
+\texttt{perf\_trig\_20.tl} & Same motion pattern repeated 20 times; harder trigonometric reasoning. \\
+\midrule
+\multicolumn{2}{l}{\textit{Heading/Turns (testing heading normalization cost)}} \\
+\midrule
+\texttt{perf\_turns\_20.tl} & \texttt{right 345} repeated 20 times; heading visits only $\{0, 345\}$. \\
+\texttt{perf\_turns\_50.tl} & Same turn pattern repeated 50 times; tests grid-check scaling. \\
+\bottomrule
+\end{longtable}
+
+%% =============================================================================
+\subsubsection*{Aggregate Results by Mode and Configuration}
+%% =============================================================================
+
+Tables~\ref{tab:agg-default}, \ref{tab:agg-universal}, and \ref{tab:agg-specific} present aggregate results for each verification mode across all six configurations.
+
+\begin{table}[H]
+\centering
+\caption{Aggregate results: \textbf{Default} mode (39 test cases).}
+\label{tab:agg-default}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Config} & \textbf{Passed} & \textbf{Failed} & \textbf{Skipped} & \textbf{Completion} & \textbf{Avg Build (s)} & \textbf{Avg Solve (s)} \\
+\midrule
+NONE       & 15 &  0 & 24 & 38.5\% & 0.141 & 2.74 \\
+BASIC      & 23 &  0 & 16 & \textbf{59.0\%} & 0.100 & 2.16 \\
+NONE+H     & 23 &  0 & 16 & \textbf{59.0\%} & 0.122 & 2.23 \\
+BASIC+H    & 23 &  0 & 16 & \textbf{59.0\%} & 0.094 & 2.21 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\vspace{-2em}
+\begin{table}[H]
+\centering
+\caption{Aggregate results: \textbf{Universal} mode (38 test cases).}
+\label{tab:agg-universal}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Config} & \textbf{Passed} & \textbf{Failed} & \textbf{Skipped} & \textbf{Completion} & \textbf{Avg Build (s)} & \textbf{Avg Solve (s)} \\
+\midrule
+NONE       & 26 &  0 & 12 & 68.4\% & 0.206 & 4.51 \\
+BASIC      & 34 &  0 &  4 & 89.5\% & 0.863 & 4.15 \\
+NONE+H     & 30 &  0 &  8 & 78.9\% & 0.172 & 1.76 \\
+BASIC+H    & 36 &  0 &  2 & \textbf{94.7\%} & 0.715 & 4.49 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\vspace{-2em}
+\begin{table}[H]
+\centering
+\caption{Aggregate results: \textbf{Specific} mode (52 test cases).}
+\label{tab:agg-specific}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Config} & \textbf{Passed} & \textbf{Failed} & \textbf{Skipped} & \textbf{Completion} & \textbf{Avg Build (s)} & \textbf{Avg Solve (s)} \\
+\midrule
+NONE       & 13 &  0 & 39 & 25.0\% & 0.312 & 1.09 \\
+BASIC      & 18 &  0 & 34 & 34.6\% & 0.262 & 1.19 \\
+NONE+H     & 20 &  0 & 32 & \textbf{38.5\%} & 0.281 & 1.74 \\
+BASIC+H    & 19 &  0 & 33 & 36.5\% & 0.246 & 2.09 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Figure~\ref{fig:verdict-stacked} provides a visual comparison of verdict distributions across all modes and configurations.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    ybar stacked,
+    width=0.95\linewidth,
+    height=0.3\linewidth,
+    bar width=8pt,
+    ymajorgrids=true,
+    grid style=dashed,
+    ylabel={Number of Tests},
+    symbolic x coords={D-NONE,D-BASIC,D-NONE+H,D-BASIC+H,
+                       U-NONE,U-BASIC,U-NONE+H,U-BASIC+H,
+                       S-NONE,S-BASIC,S-NONE+H,S-BASIC+H},
+    xtick=data,
+    x tick label style={rotate=45, anchor=east, font=\tiny},
+    legend style={at={(0.5,1.05)}, anchor=south, legend columns=3, font=\small},
+    ymin=0, ymax=60,
+    area legend
+]
+
+% Passed (green)
+\addplot[fill=green!60, draw=green!80] coordinates {
+    (D-NONE,11) (D-BASIC,17) (D-NONE+H,17) (D-BASIC+H,17)
+    (U-NONE,12) (U-BASIC,15) (U-NONE+H,13) (U-BASIC+H,17)
+    (S-NONE,10) (S-BASIC,13) (S-NONE+H,14) (S-BASIC+H,13)
+};
+\addlegendentry{Passed}
+
+% Failed (orange)
+\addplot[fill=orange!60, draw=orange!80] coordinates {
+    (D-NONE,4) (D-BASIC,6) (D-NONE+H,6) (D-BASIC+H,6)
+    (U-NONE,14) (U-BASIC,19) (U-NONE+H,17) (U-BASIC+H,19)
+    (S-NONE,3) (S-BASIC,5) (S-NONE+H,6) (S-BASIC+H,6)
+};
+\addlegendentry{Failed (expected)}
+
+% Unknown/Timeout (gray)
+\addplot[fill=gray!50, draw=gray!70] coordinates {
+    (D-NONE,24) (D-BASIC,16) (D-NONE+H,16) (D-BASIC+H,16)
+    (U-NONE,12) (U-BASIC,4) (U-NONE+H,8) (U-BASIC+H,2) 
+    (S-NONE,39) (S-BASIC,34) (S-NONE+H,32) (S-BASIC+H,33)
+};
+\addlegendentry{Timeout}
+
+\end{axis}
+\end{tikzpicture}
+\caption{Verdict distribution across all modes (D=Default, U=Universal, S=Specific) and configurations. Green indicates proven properties, orange indicates expected counterexamples found, gray indicates solver timeout.}
+\label{fig:verdict-stacked}
+\end{figure}
+
+%% =============================================================================
+\subsubsection*{Timing Results}
+%% =============================================================================
+Tables present in \noindent\textit{\small Files: \texttt{CHC-Verification/performance\_tests/perf\_results\_\{default, specific, universal\}.csv}}
+present detailed timing results for each mode in all 4 configurations.
+
+%% =============================================================================
+\subsubsection*{Build Time Analysis Across Verification Modes}
+%% =============================================================================
+
+Figure~\ref{fig:build-time-modes} shows average build times across the three verification modes for each configuration.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.9\linewidth,
+    height=0.4\linewidth,
+    xlabel={Verification Mode},
+    ylabel={Average Build Time (s)},
+    symbolic x coords={Default,Universal,Specific},
+    xtick=data,
+    legend style={at={(0.02,0.98)}, anchor=north west, font=\small},
+    ymajorgrids=true,
+    grid style=dashed,
+    ymin=0,
+    mark options={scale=1.2}
+]
+
+\addplot[color=blue, mark=*, thick, dashed] coordinates {
+    (Default,0.1414) (Universal,0.2055) (Specific,0.3120)
+};
+\addlegendentry{NONE}
+
+\addplot[color=red, mark=square*, thick] coordinates {
+    (Default,0.1005) (Universal,0.2627) (Specific,0.2619)
+};
+\addlegendentry{BASIC}
+
+\addplot[color=blue!60, mark=o, thick] coordinates {
+    (Default,0.1217) (Universal,0.1721) (Specific,0.2814)
+};
+\addlegendentry{NONE+H}
+
+\addplot[color=red!60, mark=square, thick] coordinates {
+    (Default,0.0935) (Universal,0.2152) (Specific,0.2457)
+};
+\addlegendentry{BASIC+H}
+
+\end{axis}
+\end{tikzpicture}
+\caption{Average build times across verification modes. Default mode shows fastest build times; Specific mode has highest due to parameter processing overhead.}
+\label{fig:build-time-modes}
+\end{figure}
+
+%% =============================================================================
+\subsubsection*{Solve Time Analysis Across Verification Modes}
+%% =============================================================================
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.9\linewidth,
+    height=0.5\linewidth,
+    xlabel={Verification Mode},
+    ylabel={Average Solve Time (s)},
+    symbolic x coords={Default,Universal,Specific},
+    xtick=data,
+    legend style={at={(0.02,0.98)}, anchor=north west, font=\small},
+    ymajorgrids=true,
+    grid style=dashed,
+    ymin=0,
+    mark options={scale=1.2}
+]
+
+\addplot[color=blue, mark=*, thick, dashed] coordinates {
+    (Default,2.7449) (Universal,4.5115) (Specific,1.0917)
+};
+\addlegendentry{NONE}
+
+\addplot[color=red, mark=square*, thick] coordinates {
+    (Default,2.1594) (Universal,4.1508) (Specific,1.1852)
+};
+\addlegendentry{BASIC}
+
+\addplot[color=blue!60, mark=o, thick] coordinates {
+    (Default,2.2272) (Universal,1.7583) (Specific,1.7351)
+};
+\addlegendentry{NONE+H}
+
+\addplot[color=red!60, mark=square, thick] coordinates {
+    (Default,2.2148) (Universal,4.4889) (Specific,2.0902)
+};
+\addlegendentry{BASIC+H}
+
+\end{axis}
+\end{tikzpicture}
+\caption{Average solve times across verification modes. Universal mode exhibits highest solve times due to unconstrained initial states.}
+\label{fig:solve-time-modes}
+\end{figure}
+
+
+%% =============================================================================
+\subsubsection*{Optimization Benefits}
+%% =============================================================================
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    width=0.85\linewidth,
+    height=0.5\linewidth,
+    bar width=12pt,
+    ymajorgrids=true,
+    grid style=dashed,
+    xlabel={Configuration},
+    ylabel={Completion Rate (\%)},
+    symbolic x coords={NONE,BASIC,NONE+H,BASIC+H},
+    xtick=data,
+    ymin=0, ymax=100,
+    legend style={at={(0.98,0.98)}, anchor=north east},
+    nodes near coords,
+    nodes near coords align={vertical},
+    every node near coord/.append style={font=\tiny}
+]
+
+\addplot[fill=blue!50] coordinates {
+    (NONE,38.5) (BASIC,59.0) (NONE+H,59.0) (BASIC+H,59.0)
+};
+\addlegendentry{Default}
+
+\addplot[fill=red!50] coordinates {
+    (NONE,68.4) (BASIC,89.5) (NONE+H,78.9) (BASIC+H,94.7)
+};
+\addlegendentry{Universal}
+
+\addplot[fill=green!50] coordinates {
+    (NONE,25.0) (BASIC,34.6) (NONE+H,38.5) (BASIC+H,36.5)
+};
+\addlegendentry{Specific}
+
+\end{axis}
+\end{tikzpicture}
+\caption{Test completion rates by configuration. \texttt{BASIC+H} achieves 94.7\% completion in Universal mode---the highest across all mode-configuration combinations.}
+\label{fig:completion-by-opt}
+\end{figure}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{\texttt{BASIC} provides consistent improvement.} In Default mode, completion jumps from 38.5\% (NONE) to 59.0\% (BASIC); in Universal mode, from 68.4\% to 89.5\%.
+    \item \textbf{Mode-dependent behavior.} Universal mode shows the largest improvement with \texttt{BASIC} (68.4\% $\rightarrow$ 89.5\%), while Specific mode shows minimal benefit (25.0\% $\rightarrow$ 34.6\%).
+\end{itemize}
+
+%% =============================================================================
+\subsubsection*{Timeout Reduction on using Hints}
+%% =============================================================================
+
+\begin{table}[H]
+\centering
+\caption{Timeout reduction rates with heading hints enabled.}
+\label{tab:hint-reduction}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Mode} & \textbf{NONE $\rightarrow$ NONE+H} & \textbf{BASIC $\rightarrow$ BASIC+H} \\
+\midrule
+Default   & \textbf{33.3\%} (24$\rightarrow$16) & 0.0\% (16$\rightarrow$16) \\
+Universal & 33.3\% (12$\rightarrow$8) & \textbf{50.0\%} (4$\rightarrow$2) \\
+Specific  & 17.9\% (39$\rightarrow$32) & 2.9\% (34$\rightarrow$33) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection*{Tests Uniquely Solved by Hints}
+
+\begin{table}[H]
+\centering
+\caption{Number of tests uniquely solved when hints are enabled (timeout$\rightarrow$success).}
+\label{tab:hint-unique}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Mode} & \textbf{NONE} & \textbf{BASIC}\\
+\midrule
+Default   &  8 & 1 \\
+Universal &  5 & 2 \\
+Specific  &  7 & 2 \\
+\midrule
+\textbf{Total} & \textbf{20} & \textbf{5} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\begin{itemize}[leftmargin=1.5em, nosep]
+    \item \textbf{Combining \texttt{BASIC} with \texttt{HINTS} is optimal.} It achieves the highest completion rates (59.0\% Default, 94.7\% Universal, 36.5\% Specific).
+    \item \textbf{Enable hints for trigonometric programs.} When verifying programs with heading-dependent motion (\texttt{forward}/\texttt{backward}), hints provide a significant timeout reduction.
+\end{itemize}
+
+%% =============================================================================
+\subsubsection*{Overall Performance}
+%% =============================================================================
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    ybar=0pt,
+    bar width=22pt,
+    width=0.85\linewidth,
+    height=0.45\linewidth,
+    ymajorgrids=true,
+    grid style=dashed,
+    xlabel={Configuration},
+    ylabel={Overall Completion Rate (\%)},
+    xtick={1,2,3,4},
+    xticklabels={NONE,BASIC,NONE+H,BASIC+H},
+    xmin=0, xmax=5,
+    ymin=0, ymax=70,
+    nodes near coords,
+    every node near coord/.append style={font=\small},
+]
+\addplot[ybar, bar shift=0pt, fill=blue!30,  draw=black] coordinates {(1,41.9)};
+\addplot[ybar, bar shift=0pt, fill=red!50,   draw=black] coordinates {(2,58.1)};
+\addplot[ybar, bar shift=0pt, fill=blue!50,  draw=black] coordinates {(3,56.6)};
+\addplot[ybar, bar shift=0pt, fill=red!70,   draw=black] coordinates {(4,60.5)};
+\end{axis}
+\end{tikzpicture}
+\caption{Overall completion rates across all 129 tests. \texttt{BASIC+H} achieves the highest overall rate (60.5\%).}
+\label{fig:overall-completion}
+\end{figure}
+
+\subsubsection*{Running the Performance Tests}
+
+\begin{lstlisting}[style=terminal, language=bash]
+cd Chiron-Framework/ChironCore/CHC_Verification/performance_tests
+pytest test_default.py -v      # Default mode benchmarks
+pytest test_universal.py -v    # Universal mode benchmarks
+pytest test_specific.py -v     # Specific mode benchmarks
+\end{lstlisting}
+
+\noindent Results are written to \texttt{perf\_results\_<mode>.csv} for analysis.
