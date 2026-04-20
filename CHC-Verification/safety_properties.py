@@ -46,12 +46,39 @@ class Property:
         self.invariant = None
         self.counterexample = None
 
+def safe_fp_query(fp, query_expr):
+    try:
+        return fp.query(query_expr)
+    except Z3Exception as e:
+        # Spacer can intermittently fail on mixed Int/Real arithmetic with native MBP enabled.
+        # Retry once with native MBP disabled for this fixedpoint instance.
+        if "mbp to-real" not in str(e):
+            raise
+        fp.set(**{"spacer.native_mbp": False})
+        return fp.query(query_expr)
+
+def guard_check(fp, Inv, state, guard, assumptions):
+    fp.set(**{"spacer.native_mbp": False})
+    guard_base = And(Inv(*state), guard) if assumptions is None else And(Inv(*state), assumptions, guard)
+    guard_vars = z3util.get_vars(guard_base)
+    guard_res = safe_fp_query(fp, Exists(guard_vars, guard_base))
+    if guard_res == unsat:
+        print("Guard is unreachable under current assumptions.")
+        return 'UNREACHABLE', assumptions
+    elif guard_res == sat:
+        print("Guard is reachable under current assumptions.")
+    else:
+        print(f"Guard reachability UNKNOWN: {guard_res}")
+        return 'UNKNOWN', assumptions
+    assumptions = And(assumptions, guard) if assumptions is not None else guard
+    return 'REACHABLE', assumptions
+
 def check_property(fp, Inv, state, symbol_table, counter_table, property, mode, assumptions=None):
     property_name = property.name
     property_expr = property.property_expr
     base = And(Inv(*state), Not(property_expr)) if assumptions is None else And(Inv(*state), assumptions, Not(property_expr))
     query_vars = z3util.get_vars(base)
-    result = fp.query(Exists(query_vars, base))
+    result = safe_fp_query(fp, Exists(query_vars, base))
     if result == sat:
         print(f"Property '{property_name}' is NOT an invariant. Counterexample found.")
         property.status = 'FAILED'
@@ -64,7 +91,7 @@ def check_property(fp, Inv, state, symbol_table, counter_table, property, mode, 
         print(f"Property '{property_name}' status is UNKNOWN. Solver returned: {result}")
         property.status = 'UNKNOWN'
 
-def CHC_Verification(file_name, mode, user_properties, params=None, input_ranges=None, property_scope="all", hints=["check_heading_always_on_grid", "check_termination"], timeout_ms=60_000, optimization_level=OptimizationLevel.NONE):
+def CHC_Verification(file_name, mode, user_properties, params=None, input_ranges=None, property_scope="all", pc_target=None, hints=["check_heading_always_on_grid", "check_termination"], timeout_ms=60_000, optimization_level=OptimizationLevel.NONE):
 
     return_safety = ReturnValue()
 
@@ -74,9 +101,20 @@ def CHC_Verification(file_name, mode, user_properties, params=None, input_ranges
         return_safety.error = ReturnError.ERROR
         return return_safety
     
-    if property_scope not in ["all", "terminating"]:
+    if property_scope not in ["all", "terminating", "at_pc", "upto_pc"]:
         return_safety.expr = "Invalid property scope option."
-        return_safety.advice = "Please choose 'all' or 'terminating'."
+        return_safety.advice = "Please choose 'all', 'terminating', 'at_pc', or 'upto_pc' for property_scope."
+        return_safety.error = ReturnError.ERROR
+        return return_safety
+
+    if property_scope in ["at_pc", "upto_pc"] and pc_target is None:
+        return_safety.expr = f"Property scope '{property_scope}' requires a pc_target."
+        return_safety.advice = "Please provide a pc_target integer for 'at_pc' or 'upto_pc' property scopes."
+        return_safety.error = ReturnError.ERROR
+        return return_safety
+    elif property_scope in ["all", "terminating"] and pc_target is not None:
+        return_safety.expr = f"Property scope '{property_scope}' should not have a pc_target."
+        return_safety.advice = "Please do not provide a pc_target for 'all' or 'terminating' property scopes."
         return_safety.error = ReturnError.ERROR
         return return_safety
 
@@ -85,7 +123,13 @@ def CHC_Verification(file_name, mode, user_properties, params=None, input_ranges
         return_safety.advice = "Please choose an optimization level from the OptimizationLevel enum."
         return_safety.error = ReturnError.ERROR
         return return_safety
-        
+    elif property_scope in ["at_pc", "upto_pc"] and optimization_level == OptimizationLevel.BASIC:
+        return_safety.expr = "pc-scoped verification is not supported with OptimizationLevel.BASIC."
+        return_safety.advice = "Use OptimizationLevel.NONE for property_scope='at_pc' or 'upto_pc'."
+        return_safety.error = ReturnError.ERROR
+        return return_safety
+
+
     if mode == 'specific':
         if params is None:
             return_safety.expr = "Error: 'specific' mode requires a params string representing a dictionary of parameter values."
@@ -121,6 +165,12 @@ def CHC_Verification(file_name, mode, user_properties, params=None, input_ranges
     t_build_start = time.perf_counter()
     ir = astGenPass().visit(getParseTree(file_name))
     terminal_pc = len(ir)
+    if property_scope in ["at_pc", "upto_pc"] and ((type(pc_target) is not int) or pc_target < 0 or pc_target > terminal_pc):
+        return_safety.expr = f"Invalid pc_target: {pc_target}. It must be an integer between 0 and {terminal_pc}."
+        return_safety.advice = "Please provide a valid pc_target integer for 'at_pc' or 'upto_pc' property scopes."
+        return_safety.error = ReturnError.ERROR
+        return return_safety
+
     try:
         fp, Inv, BadHeading, state, next_state, symbol_table, counter_table, turn_safe_map = add_step_rules_to_fixed_point(
             ir,
@@ -143,12 +193,12 @@ def CHC_Verification(file_name, mode, user_properties, params=None, input_ranges
         print("Hint: heading is always on the grid. Skipping heading-grid check.")
         assumptions = heading_on_grid(state[3])
         return_safety.heading_grid_safe = 'PASSED'
-    elif Hints.CHECK_HEADING_ALWAYS_ON_GRID in parsed_hints:
+    else:
         if (optimization_level == OptimizationLevel.BASIC) and (turn_safe_map is not None) and is_all_turn_safe(turn_safe_map, ir):
             return_safety.heading_grid_safe = 'PASSED'
         else:
             query_vars = z3util.get_vars(BadHeading(*state))
-            heading_grid_status = fp.query(Exists(query_vars, BadHeading(*state)))
+            heading_grid_status = safe_fp_query(fp, Exists(query_vars, BadHeading(*state)))
             if heading_grid_status == sat:
                 print("Heading can reach a value that is not a multiple of 15 degrees.")
                 print("Verification status is UNKNOWN under strict 15-degree exact semantics.")
@@ -175,24 +225,40 @@ def CHC_Verification(file_name, mode, user_properties, params=None, input_ranges
         term_guard = (state[0] == IntVal(terminal_pc))
         if Hints.ALWAYS_TERMINATES in parsed_hints:
             print("Hint: program always terminates. Skipping termination reachability check.")
+            assumptions = term_guard if assumptions is None else And(assumptions, term_guard)
         else:
-            fp.set(**{"spacer.native_mbp": False})
-            term_base = And(Inv(*state), term_guard) if assumptions is None else And(Inv(*state), assumptions, term_guard)
-            term_vars = z3util.get_vars(term_base)
-            term_res = fp.query(Exists(term_vars, term_base))
-            if term_res == unsat:
+            result, assumptions = guard_check(fp, Inv, state, term_guard, assumptions)
+            if result == 'UNREACHABLE':
                 return_safety.expr = "No terminating reachable states."
                 return_safety.advice = "Program may not terminate; terminating-scope property is UNKNOWN."
                 return_safety.error = ReturnError.SUCCESS
                 return_safety.status = 'UNKNOWN'
                 return return_safety
-            if term_res != sat:
-                return_safety.expr = f"Termination reachability UNKNOWN: {term_res}"
+            elif result == 'UNKNOWN':
+                return_safety.expr = "Termination reachability UNKNOWN."
                 return_safety.advice = "Terminating-scope property is UNKNOWN."
                 return_safety.error = ReturnError.SUCCESS
                 return_safety.status = 'UNKNOWN'
                 return return_safety
-        assumptions = term_guard if assumptions is None else And(assumptions, term_guard)
+    elif property_scope == "at_pc":
+        pc_guard = (state[0] == IntVal(pc_target))
+        result, assumptions = guard_check(fp, Inv, state, pc_guard, assumptions)
+        if result == 'UNREACHABLE':
+            return_safety.expr = f"No reachable states at pc={pc_target}."
+            return_safety.advice = f"Properties at pc={pc_target} are UNKNOWN since no states can reach that program counter."
+            return_safety.error = ReturnError.SUCCESS
+            return_safety.status = 'UNKNOWN'
+            return return_safety
+        elif result == 'UNKNOWN':
+            return_safety.expr = f"Reachability at pc={pc_target} UNKNOWN."
+            return_safety.advice = f"Properties at pc={pc_target} are UNKNOWN since reachability is unknown."
+            return_safety.error = ReturnError.SUCCESS
+            return_safety.status = 'UNKNOWN'
+            return return_safety
+    elif property_scope == "upto_pc":
+        pc_guard = And(state[0] >= IntVal(0), state[0] <= IntVal(pc_target))
+        assumptions = pc_guard if assumptions is None else And(assumptions, pc_guard)
+
 
     eval_context = {
         'xcor': state[1], 'ycor': state[2], 'heading': state[3], 'pendown': state[4],
@@ -235,16 +301,12 @@ def CHC_Verification(file_name, mode, user_properties, params=None, input_ranges
             raise
         return_safety.solve_times.append(time.perf_counter() - t_solve_start)
         if property.status == 'FAILED':
-            print(f"Stopping further checks since property '{property.name}' failed.")
             print(f"Counterexample for property '{property.name}': {property.counterexample}")
             safe = False
             return_safety.failing_properties.append([property.name, property.counterexample])
-            break
         elif property.status == 'UNKNOWN':
-            print(f"Stopping further checks since property '{property.name}' status is UNKNOWN.")
             safe = False
             return_safety.unknown_properties.append(property.name)
-            break
         else:
             print(f"Property '{property.name}' PASSED.")
             print(f"Invariant for property '{property.name}': {property.invariant}")

@@ -85,6 +85,71 @@ class TestUniversalAPI(ChironTestCase):
         self.assertEqual(result.failing_properties, [])
         self.assertEqual(result.unknown_properties, [])
 
+    def test_invalid_property_scope_error(self):
+        result = self._call_api(
+            program_path("assign_basic.tl"),
+            "universal",
+            [UserProperty("x_nonneg", "x >= 0")],
+            property_scope="bad_scope",
+        )
+        self.assertEqual(result.error, ReturnError.ERROR)
+        self.assertEqual(result.expr, "Invalid property scope option.")
+
+    def test_at_pc_requires_pc_target_error(self):
+        result = self._call_api(
+            program_path("assign_basic.tl"),
+            "universal",
+            [UserProperty("x_nonneg", "x >= 0")],
+            property_scope="at_pc",
+            pc_target=None,
+        )
+        self.assertEqual(result.error, ReturnError.ERROR)
+        self.assertEqual(result.expr, "Property scope 'at_pc' requires a pc_target.")
+
+    def test_all_scope_rejects_pc_target_error(self):
+        result = self._call_api(
+            program_path("assign_basic.tl"),
+            "universal",
+            [UserProperty("x_nonneg", "x >= 0")],
+            property_scope="all",
+            pc_target=0,
+        )
+        self.assertEqual(result.error, ReturnError.ERROR)
+        self.assertEqual(result.expr, "Property scope 'all' should not have a pc_target.")
+
+    def test_at_pc_pc_target_type_error(self):
+        result = self._call_api(
+            program_path("assign_basic.tl"),
+            "universal",
+            [UserProperty("x_nonneg", "x >= 0")],
+            property_scope="at_pc",
+            pc_target="0",
+        )
+        self.assertEqual(result.error, ReturnError.ERROR)
+        self.assertTrue(result.expr.startswith("Invalid pc_target:"))
+
+    def test_upto_pc_requires_pc_target_error(self):
+        result = self._call_api(
+            program_path("assign_basic.tl"),
+            "universal",
+            [UserProperty("x_nonneg", "x >= 0")],
+            property_scope="upto_pc",
+            pc_target=None,
+        )
+        self.assertEqual(result.error, ReturnError.ERROR)
+        self.assertEqual(result.expr, "Property scope 'upto_pc' requires a pc_target.")
+
+    def test_upto_pc_pc_target_type_error(self):
+        result = self._call_api(
+            program_path("assign_basic.tl"),
+            "universal",
+            [UserProperty("x_nonneg", "x >= 0")],
+            property_scope="upto_pc",
+            pc_target=1.5,
+        )
+        self.assertEqual(result.error, ReturnError.ERROR)
+        self.assertTrue(result.expr.startswith("Invalid pc_target:"))
+
 class TestUniversalInitialState(ChironTestCase):
     """Initial-state semantics in universal mode."""
 
@@ -129,6 +194,69 @@ class TestUniversalInitialState(ChironTestCase):
         """User vars are unconstrained at pc=0 in universal init."""
         self.load("u_init_core.tl")
         self.assert_property_fail("x_zero", "x == 0")
+
+class TestUniversalPcScopedArithmetic(ChironTestCase):
+    """Arithmetic behavior under pc-scoped property checks in universal mode."""
+
+    MODE = "universal"
+
+    def _call_api(self, *args, **kwargs):
+        with redirect_stdout(StringIO()):
+            return CHC_Verification(*args, **kwargs)
+
+    def test_at_pc_then_branch_affine_summary_pass(self):
+        """At pc=3 in then-branch, d and s satisfy branch-local affine equalities."""
+        result = self._call_api(
+            program_path("u_branch_merge_affine.tl"),
+            "universal",
+            [UserProperty("then_affine", "And(d == x - y, s == x, d >= 0)")],
+            property_scope="at_pc",
+            pc_target=3,
+            hints=["heading_on_grid_always"],
+        )
+        self.assertEqual(result.error, ReturnError.SUCCESS)
+        self.assertEqual(result.status, "PASSED")
+
+    def test_at_pc_else_branch_affine_summary_pass(self):
+        """At pc=5 in else-branch, d and guard relation (x<y) are preserved."""
+        result = self._call_api(
+            program_path("u_branch_merge_affine.tl"),
+            "universal",
+            [UserProperty("else_affine", "And(d == y - x, d >= 0, x < y)")],
+            property_scope="at_pc",
+            pc_target=5,
+            hints=["heading_on_grid_always"],
+        )
+        self.assertEqual(result.error, ReturnError.SUCCESS)
+        self.assertEqual(result.status, "PASSED")
+
+    def test_upto_pc_swap_relation_prefix_pass(self):
+        """Up to pc=1, x+y==s is preserved for fixed initial values."""
+        result = self._call_api(
+            program_path("u_swap_without_tmp.tl"),
+            "universal",
+            [UserProperty("sum_matches_s", "x + y == s")],
+            input_ranges={"x": 2, "y": 5, "s": 7},
+            property_scope="upto_pc",
+            pc_target=1,
+            hints=["heading_on_grid_always"],
+        )
+        self.assertEqual(result.error, ReturnError.SUCCESS)
+        self.assertEqual(result.status, "PASSED")
+
+    def test_upto_pc_swap_relation_breaks_after_second_step_fail(self):
+        """Including pc=2 breaks x+y==s because x gets reassigned before y is updated."""
+        result = self._call_api(
+            program_path("u_swap_without_tmp.tl"),
+            "universal",
+            [UserProperty("sum_matches_s_too_far", "x + y == s")],
+            input_ranges={"x": 2, "y": 5, "s": 7},
+            property_scope="upto_pc",
+            pc_target=2,
+            hints=["heading_on_grid_always"],
+        )
+        self.assertEqual(result.error, ReturnError.SUCCESS)
+        self.assertEqual(result.status, "FAILED")
 
 class TestUniversalArithmetic(ChironTestCase):
 
@@ -342,6 +470,26 @@ class TestUniversalGeometric(ChironTestCase):
         self.load("u_xcor_fixed.tl", property_scope="terminating")
         self.assert_property_fail("ycor_zero", "ycor == 0")
 
+    def test_geo_at_pc_xcor_fixed_then_branch_point_pass(self):
+        """At pc=2 (then branch), turtle position is exactly (8, 3) and p>=0."""
+        self.load("u_xcor_fixed.tl", property_scope="at_pc", pc_target=2)
+        self.assert_property_pass("then_point", "And(xcor == 8, ycor == 3, p >= 0)")
+
+    def test_geo_at_pc_xcor_fixed_merge_ycor_three_fail(self):
+        """At merge pc, ycor is branch-dependent (+3 or -3), so ycor==3 is not invariant."""
+        self.load("u_xcor_fixed.tl", property_scope="at_pc", pc_target=4)
+        self.assert_property_fail("merge_ycor_three", "ycor == 3")
+
+    def test_geo_upto_pc_fixed_target_heading_range_pass(self):
+        """Heading remains within [0,360) on the prefix up to pc=1."""
+        self.load("u_fixed_target.tl", property_scope="upto_pc", pc_target=1)
+        self.assert_property_pass("heading_range_prefix", "And(heading >= 0, heading < 360)")
+
+    def test_geo_upto_pc_fixed_target_at_target_fail(self):
+        """Up to pc=1 includes pre-goto states, so being already at (10,20) is not invariant."""
+        self.load("u_fixed_target.tl", property_scope="upto_pc", pc_target=1)
+        self.assert_property_fail("at_target_prefix", "And(xcor == 10, ycor == 20)")
+
     def test_geo_loop_diagonal_heading_grid_safe(self):
         self.load("u_loop_diagonal.tl", property_scope="all")
         self.assert_heading_grid_safe("heading_grid", "xcor == xcor")
@@ -385,6 +533,26 @@ class TestUniversalPen(ChironTestCase):
     def test_branch_pen_term_pendown_fail(self):
         self.load("u_branch_pen.tl", property_scope="terminating")
         self.assert_property_fail("pendown_true", "pendown")
+
+    def test_branch_pen_at_pc_then_guard_pen_relation_pass(self):
+        """At then-branch command pc, x>=0 and pen is up."""
+        self.load("u_branch_pen.tl", property_scope="at_pc", pc_target=2)
+        self.assert_property_pass("then_guard_pen", "And(x >= 0, Not(pendown))")
+
+    def test_branch_pen_at_pc_merge_then_only_relation_fail(self):
+        """At merge pc both branches are present, so then-only relation does not hold."""
+        self.load("u_branch_pen.tl", property_scope="at_pc", pc_target=4)
+        self.assert_property_fail("merge_then_only", "And(x >= 0, Not(pendown))")
+
+    def test_branch_pen_upto_pc_prefix_guarded_pen_pass(self):
+        """Across prefix up to merge, if pen is up then path satisfies x>=0."""
+        self.load("u_branch_pen.tl", property_scope="upto_pc", pc_target=4)
+        self.assert_property_pass("prefix_guarded_pen", "Or(And(x >= 0, Not(pendown)), pendown)")
+
+    def test_branch_pen_upto_pc_prefix_opposite_guard_fail(self):
+        """Across prefix up to merge, requiring pendown to imply x<0 is too strong."""
+        self.load("u_branch_pen.tl", property_scope="upto_pc", pc_target=4)
+        self.assert_property_fail("prefix_opposite_guard", "Or(And(x < 0, pendown), Not(pendown))")
 
     def test_branch_pen_adv_term_relation_pass(self):
         self.load("u_branch_pen_adv.tl", property_scope="terminating")
@@ -443,6 +611,34 @@ class TestUniversalDirectional(ChironTestCase):
     def test_heading_fixed_left_range_pass(self):
         self.load("u_fixed_left.tl", property_scope="all")
         self.assert_property_pass("heading_range", "And(heading >= 0, heading < 360)")
+
+    def test_heading_at_pc_net_zero_midpoint_on_grid_pass(self):
+        """After first turn left(45), heading remains on 15-degree grid."""
+        self.load("u_net_zero_turn.tl", property_scope="at_pc", pc_target=1)
+        result = self.return_from_api_check("heading_mod_15_zero", "heading % 15 == 0")
+        self.assertEqual(result.error, ReturnError.SUCCESS)
+        self.assertEqual(result.status, "PASSED")
+
+    def test_heading_at_pc_net_zero_midpoint_mod30_fail(self):
+        """After first turn left(45), heading need not be a multiple of 30."""
+        self.load("u_net_zero_turn.tl", property_scope="at_pc", pc_target=1)
+        result = self.return_from_api_check("heading_mod_30_zero", "heading % 30 == 0")
+        self.assertEqual(result.error, ReturnError.SUCCESS)
+        self.assertEqual(result.status, "FAILED")
+
+    def test_heading_upto_pc_net_zero_midpoint_on_grid_pass(self):
+        """Across prefix up to pc=1, headings are multiples of 15 degrees."""
+        self.load("u_net_zero_turn.tl", property_scope="upto_pc", pc_target=1)
+        result = self.return_from_api_check("heading_mod_15_zero_prefix", "heading % 15 == 0")
+        self.assertEqual(result.error, ReturnError.SUCCESS)
+        self.assertEqual(result.status, "PASSED")
+
+    def test_heading_upto_pc_net_zero_heading_zero_fail(self):
+        """Across prefix up to pc=1, heading==0 fails due to the post-left state."""
+        self.load("u_net_zero_turn.tl", property_scope="upto_pc", pc_target=1)
+        result = self.return_from_api_check("heading_zero_prefix", "heading == 0")
+        self.assertEqual(result.error, ReturnError.SUCCESS)
+        self.assertEqual(result.status, "FAILED")
 
     def test_heading_branch_mul15_basic_opt_pass(self):
         """Branch assigns turn by 30 or 45 (both multiples of 15)."""

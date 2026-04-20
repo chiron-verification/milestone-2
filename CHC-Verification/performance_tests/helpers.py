@@ -72,7 +72,7 @@ def program_path(name: str) -> str:
 
 def _run_api_check(file_path, mode, name, expr_str, params=None,
                    hints=None, timeout_ms=20_000, property_scope="all",
-                   optimization_level=OptimizationLevel.NONE):
+                   optimization_level=OptimizationLevel.NONE, pc_target=None):
     if hints is None:
         hints = ["check_heading_always_on_grid"]
     params_str = None
@@ -88,6 +88,7 @@ def _run_api_check(file_path, mode, name, expr_str, params=None,
                 hints=hints,
                 timeout_ms=timeout_ms,
                 optimization_level=optimization_level,
+                pc_target=pc_target,
             )
     except Exception as e:
         if 'canceled' in str(e):
@@ -113,13 +114,14 @@ class PerformanceTestCase(unittest.TestCase):
     DEFAULT_TIMEOUT_MS: int = 20_000
 
     def load(self, tl_file: str, params=None,
-             hints=None, timeout_ms=None, property_scope="all"):
+             hints=None, timeout_ms=None, property_scope="all", pc_target=None):
         self._tl_file        = tl_file
         self._file_path      = program_path(tl_file)
         self._params         = params
         self._hints          = hints if hints is not None else ["check_heading_always_on_grid"]
         self._timeout_ms     = timeout_ms if timeout_ms is not None else self.DEFAULT_TIMEOUT_MS
         self._property_scope = property_scope
+        self._pc_target      = pc_target
 
     def time_check(self, name: str, expr: str, expected_status: str = None):
         """
@@ -144,7 +146,7 @@ class PerformanceTestCase(unittest.TestCase):
             return _run_api_check(self._file_path, self.MODE, name, expr,
                                   self._params, hints,
                                   self._timeout_ms, self._property_scope,
-                                  optimization_level=opt)
+                                  optimization_level=opt, pc_target=self._pc_target)
 
         def _safe_run(opt, hints):
             try:
