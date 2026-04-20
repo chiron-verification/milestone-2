@@ -237,6 +237,42 @@ def is_summarizable_loop_nested(ir, loop_desc, summarized_inits):
         return False
     if loop_count > MAX_SUMMARIZE_ITERATIONS:
         return False
+    def _is_supported_condition(idx):
+        instr, jump = ir[idx]
+        if not isinstance(instr, ChironAST.ConditionCommand):
+            return False
+
+        target = idx + jump
+        if jump <= 0:
+            return False
+        if target < body_start or target > body_end + 1:
+            return False
+
+        # Parser-emitted forward goto used to skip an else-block.
+        if isinstance(instr.cond, ChironAST.BoolFalse):
+            return True
+
+        # Structured if/else shape:
+        #   idx:        if cond        jump -> else_start
+        #   ...
+        #   else_start-1: if False    jump -> join
+        #   else_start:   else body
+        else_start = target
+        goto_idx = else_start - 1
+        if goto_idx < body_start or goto_idx > body_end:
+            return False
+        goto_instr, goto_jump = ir[goto_idx]
+        if not isinstance(goto_instr, ChironAST.ConditionCommand):
+            return False
+        if not isinstance(goto_instr.cond, ChironAST.BoolFalse):
+            return False
+        join_idx = goto_idx + goto_jump
+        if goto_jump <= 0:
+            return False
+        if join_idx <= else_start or join_idx > body_end + 1:
+            return False
+        return True
+
     idx = body_start
     while idx <= body_end:
         if idx in summarized_inits:
@@ -244,8 +280,13 @@ def is_summarizable_loop_nested(ir, loop_desc, summarized_inits):
             idx = summarized_inits[idx]
             continue
         instr, jump = ir[idx]
-        if isinstance(instr, ChironAST.ConditionCommand) or isinstance(instr, ChironAST.AssertCommand):
+        if isinstance(instr, ChironAST.AssertCommand):
             return False
+        if isinstance(instr, ChironAST.ConditionCommand):
+            if not _is_supported_condition(idx):
+                return False
+            idx += 1
+            continue
         if jump != 1:
             return False
         if counter_name in str(instr):

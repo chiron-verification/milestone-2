@@ -53,6 +53,43 @@ def chiron_expr_to_z3_env(expr, env):
         return -chiron_expr_to_z3_env(expr.expr, env)
     raise Exception("Unsupported expr in summarizer")
 
+def chiron_bool_to_z3_env(expr, env, pendown_expr):
+    if isinstance(expr, ChironAST.BinCondOp):
+        lexpr = expr.lexpr
+        rexpr = expr.rexpr
+        if isinstance(expr, ChironAST.AND):
+            return And(
+                chiron_bool_to_z3_env(lexpr, env, pendown_expr),
+                chiron_bool_to_z3_env(rexpr, env, pendown_expr),
+            )
+        if isinstance(expr, ChironAST.OR):
+            return Or(
+                chiron_bool_to_z3_env(lexpr, env, pendown_expr),
+                chiron_bool_to_z3_env(rexpr, env, pendown_expr),
+            )
+        if isinstance(expr, ChironAST.LT):
+            return chiron_expr_to_z3_env(lexpr, env) < chiron_expr_to_z3_env(rexpr, env)
+        if isinstance(expr, ChironAST.GT):
+            return chiron_expr_to_z3_env(lexpr, env) > chiron_expr_to_z3_env(rexpr, env)
+        if isinstance(expr, ChironAST.LTE):
+            return chiron_expr_to_z3_env(lexpr, env) <= chiron_expr_to_z3_env(rexpr, env)
+        if isinstance(expr, ChironAST.GTE):
+            return chiron_expr_to_z3_env(lexpr, env) >= chiron_expr_to_z3_env(rexpr, env)
+        if isinstance(expr, ChironAST.EQ):
+            return chiron_expr_to_z3_env(lexpr, env) == chiron_expr_to_z3_env(rexpr, env)
+        if isinstance(expr, ChironAST.NEQ):
+            return chiron_expr_to_z3_env(lexpr, env) != chiron_expr_to_z3_env(rexpr, env)
+        raise Exception("Unsupported boolean binop in summarizer")
+    if isinstance(expr, ChironAST.NOT):
+        return Not(chiron_bool_to_z3_env(expr.expr, env, pendown_expr))
+    if isinstance(expr, ChironAST.PenStatus):
+        return pendown_expr
+    if isinstance(expr, ChironAST.BoolTrue):
+        return BoolVal(True)
+    if isinstance(expr, ChironAST.BoolFalse):
+        return BoolVal(False)
+    raise Exception("Unsupported boolean expression in summarizer")
+
 def apply_instr_state_only(instr, fp, Inv, state, next_state, symbol_table, counter_table, i):
     next_state_xcor = state[1]
     next_state_ycor = state[2]
@@ -178,9 +215,223 @@ def _sub_state(expr, state_vars, new_vals):
     """Substitute state_vars[i] -> new_vals[i] in a Z3 expression."""
     return substitute(expr, *zip(state_vars, new_vals))
 
+def _merge_branch_value(cond_expr, then_expr, else_expr):
+    """
+    Merge then/else expressions with a guard while factoring common arithmetic
+    prefixes to avoid expression blow-up in branch-heavy loops.
+    """
+    if then_expr.eq(else_expr):
+        return then_expr
+
+    # Factor common additive prefix:
+    #   If(c, base + a, base + b) -> base + If(c, a, b)
+    if (
+        is_app(then_expr)
+        and is_app(else_expr)
+        and then_expr.decl().kind() == Z3_OP_ADD
+        and else_expr.decl().kind() == Z3_OP_ADD
+        and then_expr.num_args() == 2
+        and else_expr.num_args() == 2
+    ):
+        t0, t1 = then_expr.arg(0), then_expr.arg(1)
+        e0, e1 = else_expr.arg(0), else_expr.arg(1)
+        if t0.eq(e0):
+            return t0 + If(cond_expr, t1, e1)
+        if t1.eq(e1):
+            return If(cond_expr, t0, e0) + t1
+
+    return If(cond_expr, then_expr, else_expr)
+
+def _execute_segment_with_branch_merge(
+    ir,
+    start_idx,
+    end_idx,
+    current_state,
+    path_guard,
+    fp,
+    Inv,
+    state,
+    next_state,
+    symbol_table,
+    counter_table,
+    turn_safe_map,
+    inner_summaries,
+    state_vars,
+):
+    """
+    Symbolically execute a straight-line IR segment with structured if/else
+    support, returning:
+      (end_state, bad_rules)
+
+    bad_rules entries are triples:
+      (path_guarded_bad_cond, bad_state_no_pc, bad_pc)
+    """
+    if start_idx > end_idx:
+        return current_state, []
+
+    bad_rules = []
+    idx = start_idx
+    while idx <= end_idx:
+        if idx in inner_summaries:
+            inner_exit_idx, inner_snpc, inner_bad = inner_summaries[idx]
+            cur_no_pc = list(current_state[1:])
+            
+            # Compose: substitute free state vars with the current state
+            # expressions in the pre-computed inner summary.
+            new_no_pc = tuple(_sub_state(e, state_vars, cur_no_pc) for e in inner_snpc)
+            
+            # Remap the inner loop's bad-heading conditions the same way.
+            for (ib_cond, ib_snpc, ib_pc) in inner_bad:
+                guarded = And(path_guard, _sub_state(ib_cond, state_vars, cur_no_pc))
+                if is_false(guarded):
+                    continue
+                bad_rules.append((
+                    guarded,
+                    tuple(_sub_state(e, state_vars, cur_no_pc) for e in ib_snpc),
+                    ib_pc,
+                ))
+            current_state = (state[0], *new_no_pc)
+            idx = inner_exit_idx
+            continue
+
+        instr, jump = ir[idx]
+
+        if isinstance(instr, ChironAST.AssertCommand):
+            raise ValueError(f"Unsupported assert in summarized segment at index {idx}")
+
+        if isinstance(instr, ChironAST.ConditionCommand):
+            # Parser-emitted forward goto used to skip else blocks.
+            if isinstance(instr.cond, ChironAST.BoolFalse):
+                target = idx + jump
+                if target <= idx or target < start_idx or target > end_idx + 1:
+                    raise ValueError(f"Unsupported forward goto shape at index {idx}")
+                idx = target
+                continue
+
+            false_start = idx + jump
+            goto_idx = false_start - 1
+            if false_start <= idx or false_start > end_idx + 1:
+                raise ValueError(f"Unsupported conditional jump target at index {idx}")
+            if goto_idx < start_idx or goto_idx > end_idx:
+                raise ValueError(f"Malformed if/else (missing true-branch terminator) at index {idx}")
+
+            goto_instr, goto_jump = ir[goto_idx]
+            if not isinstance(goto_instr, ChironAST.ConditionCommand) or not isinstance(goto_instr.cond, ChironAST.BoolFalse):
+                raise ValueError(f"Malformed if/else join marker at index {idx}")
+
+            join_idx = goto_idx + goto_jump
+            if goto_jump <= 0 or join_idx <= false_start or join_idx > end_idx + 1:
+                raise ValueError(f"Malformed if/else join target at index {idx}")
+
+            env = _env_from_state(current_state, symbol_table, counter_table)
+            cond_expr = chiron_bool_to_z3_env(instr.cond, env, current_state[4])
+
+            # Statically known branch condition: avoid introducing unnecessary ITEs.
+            if is_true(cond_expr):
+                current_state, then_bad = _execute_segment_with_branch_merge(
+                    ir,
+                    idx + 1,
+                    goto_idx - 1,
+                    current_state,
+                    path_guard,
+                    fp,
+                    Inv,
+                    state,
+                    next_state,
+                    symbol_table,
+                    counter_table,
+                    turn_safe_map,
+                    inner_summaries,
+                    state_vars,
+                )
+                bad_rules.extend(then_bad)
+                idx = join_idx
+                continue
+
+            if is_false(cond_expr):
+                current_state, else_bad = _execute_segment_with_branch_merge(
+                    ir,
+                    false_start,
+                    join_idx - 1,
+                    current_state,
+                    path_guard,
+                    fp,
+                    Inv,
+                    state,
+                    next_state,
+                    symbol_table,
+                    counter_table,
+                    turn_safe_map,
+                    inner_summaries,
+                    state_vars,
+                )
+                bad_rules.extend(else_bad)
+                idx = join_idx
+                continue
+
+            then_state, then_bad = _execute_segment_with_branch_merge(
+                ir,
+                idx + 1,
+                goto_idx - 1,
+                current_state,
+                And(path_guard, cond_expr),
+                fp,
+                Inv,
+                state,
+                next_state,
+                symbol_table,
+                counter_table,
+                turn_safe_map,
+                inner_summaries,
+                state_vars,
+            )
+            else_state, else_bad = _execute_segment_with_branch_merge(
+                ir,
+                false_start,
+                join_idx - 1,
+                current_state,
+                And(path_guard, Not(cond_expr)),
+                fp,
+                Inv,
+                state,
+                next_state,
+                symbol_table,
+                counter_table,
+                turn_safe_map,
+                inner_summaries,
+                state_vars,
+            )
+
+            merged_no_pc = []
+            for j in range(1, len(current_state)):
+                then_j = then_state[j]
+                else_j = else_state[j]
+                merged_no_pc.append(_merge_branch_value(cond_expr, then_j, else_j))
+            merged_no_pc = tuple(merged_no_pc)
+            current_state = (state[0], *merged_no_pc)
+            bad_rules.extend(then_bad)
+            bad_rules.extend(else_bad)
+            idx = join_idx
+            continue
+
+        if jump != 1:
+            raise ValueError(f"Unsupported non-unit jump at index {idx}")
+
+        current_state_no_pc, bad_rule = apply_instr_state_only(
+            instr, fp, Inv, current_state, next_state, symbol_table, counter_table, idx
+        )
+        if (bad_rule is not None) and (turn_safe_map is None or not turn_safe_map[idx]):
+            guarded = And(path_guard, bad_rule)
+            if not is_false(guarded):
+                bad_rules.append((guarded, current_state_no_pc, idx + 1))
+        current_state = (state[0], *current_state_no_pc)
+        idx += 1
+
+    return current_state, bad_rules
+
 def summarize_loop_effect_nested(ir, loop_desc, fp, Inv, state, next_state, symbol_table, counter_table, turn_safe_map, inner_summaries):
     """
-    Like summarize_loop_effect but handles nested summarized inner loops.
+    Like summarize_loop_effect but handles nested summarized inner loops and conditional branches in the loop body.
 
     inner_summaries: dict mapping inner loop init_idx ->
                      (exit_idx, state_no_pc_tuple, bad_rules_list)
@@ -211,30 +462,27 @@ def summarize_loop_effect_nested(ir, loop_desc, fp, Inv, state, next_state, symb
     dec_instr = ir[dec_idx][0]
 
     for _ in range(loop_count):
-        idx = body_start
-        while idx <= body_end:
-            if idx in inner_summaries:
-                inner_exit_idx, inner_snpc, inner_bad = inner_summaries[idx]
-                cur_no_pc = list(current_state[1:])
-                # Compose: substitute free state vars with the current state
-                # expressions in the pre-computed inner summary.
-                new_no_pc = tuple(_sub_state(e, state_vars, cur_no_pc) for e in inner_snpc)
-                # Remap the inner loop's bad-heading conditions the same way.
-                for (ib_cond, ib_snpc, ib_pc) in inner_bad:
-                    bad_rules.append((
-                        _sub_state(ib_cond, state_vars, cur_no_pc),
-                        tuple(_sub_state(e, state_vars, cur_no_pc) for e in ib_snpc),
-                        ib_pc,
-                    ))
-                current_state = (state[0], *new_no_pc)
-                idx = inner_exit_idx
-            else:
-                instr, _ = ir[idx]
-                current_state_no_pc, bad_rule = apply_instr_state_only(instr, fp, Inv, current_state, next_state, symbol_table, counter_table, idx)
-                if (bad_rule is not None) and (turn_safe_map is None or not turn_safe_map[idx]):
-                    bad_rules.append((bad_rule, current_state_no_pc, idx + 1))
-                current_state = (state[0], *current_state_no_pc)
-                idx += 1
+        try:
+            current_state, iter_bad_rules = _execute_segment_with_branch_merge(
+                ir,
+                body_start,
+                body_end,
+                current_state,
+                BoolVal(True),
+                fp,
+                Inv,
+                state,
+                next_state,
+                symbol_table,
+                counter_table,
+                turn_safe_map,
+                inner_summaries,
+                state_vars,
+            )
+        except ValueError:
+            # Unsupported control-flow shape in this loop body.
+            return None, []
+        bad_rules.extend(iter_bad_rules)
 
         # Apply decrement at end of each iteration.
         current_state_no_pc, bad_rule = apply_instr_state_only(dec_instr, fp, Inv, current_state, next_state, symbol_table, counter_table, dec_idx)
