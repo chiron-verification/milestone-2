@@ -11,6 +11,7 @@ from sbfl import testsuiteGenerator
 sys.path.insert(0, "../Submission/")
 sys.path.insert(0, "ChironAST/")
 sys.path.insert(0, "cfg/")
+sys.path.insert(0, "../../CHC-Verification")
 
 import pickle
 import time
@@ -25,6 +26,14 @@ import submissionDFA as DFASub
 import submissionAI as AISub
 from sbflSubmission import computeRanks
 import csv
+from safety_properties import CHC_Verification, ReturnError
+from variable_name_detection_in_IR import OptimizationLevel
+
+
+class UserProperty:
+    def __init__(self, name: str, expr: str):
+        self.name = name
+        self.expr = expr
 
 
 def cleanup():
@@ -194,6 +203,66 @@ if __name__ == "__main__":
         help="To display computation to Console",
         default=True,
         type=bool,
+    )
+
+    cmdparser.add_argument(
+        "-chc",
+        "--chcVerify",
+        action="store_true",
+        help="Run CHC-based safety verification on a Chiron program.",
+    )
+    cmdparser.add_argument(
+        "-chc_mode",
+        "--chcMode",
+        default="default",
+        choices=["default", "specific", "universal"],
+        help="CHC verification mode: 'default' (fixed initial state), 'specific' (concrete params via -d), 'universal' (symbolic initial state).",
+    )
+    cmdparser.add_argument(
+        "-chc_props",
+        "--chcProperties",
+        type=str,
+        default="",
+        help="Safety properties to verify, as semicolon-separated 'name:expr' pairs. "
+             "Expressions are Z3-style string formulae over program variables (with ':' prefix). "
+             "Example: -chc_props 'non_neg_x::x >= 0;bounded_y::y <= 100'",
+    )
+    cmdparser.add_argument(
+        "-chc_scope",
+        "--chcScope",
+        default="all",
+        choices=["all", "terminating", "at_pc", "upto_pc"],
+        help="Property scope: 'all' reachable states, 'terminating' final states only, "
+             "'at_pc' / 'upto_pc' require --chcPc.",
+    )
+    cmdparser.add_argument(
+        "-chc_pc",
+        "--chcPc",
+        type=int,
+        default=None,
+        help="Target PC for 'at_pc' or 'upto_pc' property scope.",
+    )
+    cmdparser.add_argument(
+        "-chc_timeout",
+        "--chcTimeout",
+        type=int,
+        default=60_000,
+        help="CHC solver timeout in milliseconds (default: 60000).",
+    )
+    cmdparser.add_argument(
+        "-chc_hints",
+        "--chcHints",
+        type=str,
+        default="check_heading_always_on_grid,check_termination",
+        help="Comma-separated solver hints. Choices: check_heading_always_on_grid, "
+             "heading_on_grid_always, check_termination, always_terminates.",
+    )
+    cmdparser.add_argument(
+        "-chc_opt",
+        "--chcOpt",
+        default="NONE",
+        choices=["NONE", "BASIC"],
+        help="CHC encoding optimization level (default: NONE).",
     )
 
     args = cmdparser.parse_args()
@@ -392,3 +461,45 @@ if __name__ == "__main__":
             writer = csv.writer(file)
             writer.writerows(spectrum)
         print("DONE..")
+
+    if args.chcVerify:
+        props = []
+        if args.chcProperties:
+            for entry in args.chcProperties.split(";"):
+                entry = entry.strip()
+                if ":" not in entry:
+                    raise ValueError(f"Bad property format (expected 'name:expr'): {entry!r}")
+                name, expr = entry.split(":", 1)
+                props.append(UserProperty(name.strip(), expr.strip()))
+
+        hints = [h.strip() for h in args.chcHints.split(",") if h.strip()]
+        opt = OptimizationLevel.BASIC if args.chcOpt == "BASIC" else OptimizationLevel.NONE
+        params_str = str(args.params) if args.params and args.chcMode == "specific" else None
+
+        result = CHC_Verification(
+            file_name=args.progfl,
+            mode=args.chcMode,
+            user_properties=props,
+            params=params_str,
+            property_scope=args.chcScope,
+            pc_target=args.chcPc,
+            hints=hints,
+            timeout_ms=args.chcTimeout,
+            optimization_level=opt,
+        )
+
+        print("\n=== CHC Verification Result ===")
+        print(f"Status          : {result.status}")
+        print(f"Heading-grid    : {result.heading_grid_safe}")
+        if result.build_time is not None:
+            print(f"Build time      : {result.build_time:.3f}s")
+        if result.passing_properties:
+            print("Passing         :", [n for n, _ in result.passing_properties])
+        if result.failing_properties:
+            print("Failing         :", [n for n, _ in result.failing_properties])
+        if result.unknown_properties:
+            print("Unknown         :", result.unknown_properties)
+        if result.expr:
+            print(f"Message         : {result.expr}")
+        if result.advice:
+            print(f"Advice          : {result.advice}")
