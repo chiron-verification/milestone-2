@@ -12,32 +12,98 @@ to prove or refute safety properties.
 | Arush Upadhyaya | 220213 | [A-Rush-R](https://github.com/A-Rush-R) |
 | Kushagra Srivastava | 220573 | [whizdor](https://github.com/whizdor) |
 
-## Milestone-2 Snapshot
+Current submission commit (milestone-3):
+`<TBD>`
 
-Compared to the milestone-1 submission (`0f99ade6d4aa2516f9e47e013ad06d29e8b8a2f7`),
-the verifier is now API-first and supports richer configuration:
+## Features
 
-- Programmatic API via `CHC_Verification(...)`
-- Structured return object with status, advice, build/solve times, and per-property outcomes
-- Modes: `default`, `specific`, `universal`
-- Property scopes: `all` reachable states or `terminating` states only
-- Heading-grid checks/hints for enforcing or assuming 15-degree turn alignment
-- Explicit timeout control per verification call
+- **API-first verification pipeline**
+  - Main entrypoint `CHC_Verification(...)` builds CHCs from Chiron IR and checks properties with Z3 Fixedpoint (SPACER).
+  - Verifies multiple properties in one call and reports per-property outcomes.
 
-Current submission commit (milestone-2):
-`c88682f82df5d5f287c4460d8bb6d30d7d2c8a82`
+- **Rich state modeling in invariant relation**
+  - Tracks `pc`, `xcor`, `ycor`, `heading`, `pendown`, discovered user variables, and internal repeat counters.
+  - Uses exact transition rules over this state to model program execution.
 
-## Repository Structure
+- **Three execution modes with distinct initial-state semantics**
+  - `default`: concrete initial state (`pc=0`, `(xcor,ycor)=(0,0)`, `heading=0`, `pendown=False`, vars/counters zero).
+  - `specific`: concrete initial state from provided parameter map (missing params default to `0`).
+  - `universal`: quantified initial state with unconstrained position/vars, heading constrained to 15-degree grid, `pendown=True`, loop counters initialized to `0`, and optional `input_ranges` bounds for selected variables.
 
-- `CHC-Verification/`
-  - `variable_name_detection_in_IR.py`: extracts user variables and loop counters from linear IR
-  - `z3_fixed_point.py`: builds mode-dependent invariant signature/state vectors
-  - `init_fixed_point.py`: initializes fixedpoint engine and mode-specific base rules
-  - `step_rules.py`: translates Chiron IR instructions to CHC transition rules
-  - `heading_grid.py`: heading lattice helper logic
-  - `safety_properties.py`: main API (`CHC_Verification`) and property checking
-- `Chiron-Framework/ChironCore/`
-  - Chiron parser/IR infrastructure consumed by the verifier (`irhandler`, AST builder, etc.)
+- **Property scoping beyond full-program invariants**
+  - `all`: check over all reachable states.
+  - `terminating`: check only when `pc == terminal_pc`, with reachability guard checks.
+  - `at_pc`: check exactly at a chosen `pc_target` (with reachability validation).
+  - `upto_pc`: check on the prefix region `0 <= pc <= pc_target`.
+
+- **Heading-grid soundness gate**
+  - Builds a dedicated `BadHeading` relation to detect states where heading leaves the 15-degree lattice.
+  - If heading-grid safety fails (or is unknown), property checks are skipped and status is reported as `UNKNOWN` under strict semantics.
+  - Supports hints to either check or assume grid-safety (`check_heading_always_on_grid`, `heading_on_grid_always`).
+
+- **Instruction coverage in CHC translation**
+  - Handles assignment, branching (`ConditionCommand`), assertions, movement (`forward/backward/left/right`), pen commands, `goto`, `pause`, and `noop`.
+  - Models heading updates modulo `360`.
+  - Uses exact precomputed trig constants for movement under grid-aligned headings.
+
+- **Optimization support (`OptimizationLevel`)**
+  - `NONE`: baseline precise encoding.
+  - `BASIC`: static turn-safety analysis (skip redundant heading-bad checks when provably safe) and repeat-loop summarization.
+  - Loop summarization supports nested loops and structured if/else in loop bodies, with safeguards (iteration cap and shape checks).
+
+- **Semantic helper properties**
+  - `CHC_Verification_semantic(...)` transpiles helper-style properties into raw solver expressions.
+  - Includes helpers for arithmetic, ranges, pen state, heading predicates, and guarded relational properties (e.g., `is_nonnegative`, `position_in_box`, `heading_cardinal`, `relation_guarded`).
+
+- **Robust API ergonomics**
+  - Strict validation for modes, scopes, hints, `pc_target`, optimization compatibility, `input_ranges`, and property parsing.
+  - Structured return object includes:
+    - overall status/error/advice,
+    - heading-grid status,
+    - fixedpoint build time,
+    - per-property solve times,
+    - passing invariants and failing counterexamples.
+
+- **Regression and performance infrastructure**
+  - Correctness suites cover `default`, `specific`, `universal`, and semantic-helper pathways.
+  - Performance harness benchmarks `NONE/BASIC` and hint/no-hint variants, and records timings/results to CSV.
+
+## Repository Structure and File Responsibilities
+
+### Top-Level Files and Directories
+
+- `USAGE.md`: canonical setup + API usage instructions.
+- `CHC-Verification/`: verifier implementation, correctness tests, performance tests, and benchmark outputs.
+- `Chiron-Framework/`: upstream Chiron parser/IR framework consumed by this verifier.
+- `milestone-1-report/`, `milestone-2-report/`, `milestone-3-report/`: report sources and generated milestone PDFs.
+- `literature-review/`: background notes and references for related work.
+- `presentation_suite/`: demo/presentation scripts.
+- `project_poster/`: poster sources and assets.
+
+### `CHC-Verification/` Core Verifier Files
+
+- `safety_properties.py`: primary API (`CHC_Verification`), input validation, solver orchestration, property querying, and structured return construction.
+- `semantic_properties.py`: helper-property transpiler and semantic wrapper API (`CHC_Verification_semantic`).
+- `step_rules.py`: IR instruction-to-CHC transition encoding, `BadHeading` rule generation, and optimization-aware rule emission.
+- `optimization_helpers.py`: static analyses and helpers for turn safety and repeat-loop summarization logic.
+- `init_fixed_point.py`: fixedpoint object initialization and mode-specific initial-state rule construction.
+- `z3_fixed_point.py`: invariant signature/state tuple generation and symbol/counter table integration.
+- `variable_name_detection_in_IR.py`: discovers user variables + repeat counters from IR and defines `OptimizationLevel`.
+- `heading_grid.py`: heading lattice predicate helper (`heading_on_grid`).
+
+### `CHC-Verification/correctness_tests/`
+
+- Detailed correctness test-file responsibilities and fixture grouping are documented in `CHC-Verification/correctness_tests/README.md`.
+
+### `CHC-Verification/performance_tests/`
+
+- Detailed performance test-file responsibilities, benchmark fixtures, and result artifacts are documented in `CHC-Verification/performance_tests/README.md`.
+
+### Chiron Framework Files Directly Consumed by Verifier
+
+- `Chiron-Framework/ChironCore/irhandler.py`: parser frontend used to produce parse trees from `.tl` programs.
+- `Chiron-Framework/ChironCore/ChironAST/builder.py`: AST/IR generation pass consumed before CHC encoding.
+- `Chiron-Framework/ChironCore/ChironAST/ChironAST.py`: AST node definitions referenced by the encoder and analyses.
 
 ## Verification Model
 
@@ -57,168 +123,7 @@ A property `P` is checked by querying reachability of violating states:
 - `unsat` => property proved invariant (`PASSED`)
 - otherwise => solver could not conclude (`UNKNOWN`)
 
-## API Reference
+## Usage
 
-Primary entrypoint: `CHC-Verification/safety_properties.py`
-(`OptimizationLevel` is defined in `CHC-Verification/variable_name_detection_in_IR.py`)
-
-```python
-CHC_Verification(
-    file_name,
-    mode,
-    user_properties,
-    params=None,
-    property_scope="all",
-    hints=["check_heading_always_on_grid"],
-    timeout_ms=60_000,
-    optimization_level=OptimizationLevel.NONE,
-)
-```
-
-### Parameters
-
-- `file_name`: path to `.tl` program
-- `mode`: `default`, `specific`, or `universal`
-- `user_properties`: list of objects with fields:
-  - `name`: property label
-  - `expr`: property expression as string
-- `params`: required in `specific` mode, passed as a dictionary string
-  (example: `"{'start': 10, 'step': 5}"`)
-- `property_scope`:
-  - `"all"`: evaluate over all reachable states
-  - `"terminating"`: evaluate only at terminating states (`pc == terminal_pc`)
-- `hints`:
-  - `"check_heading_always_on_grid"`: verify heading stays on 15-degree lattice before property checks
-  - `"heading_on_grid_always"`: assume heading grid restriction directly
-- `timeout_ms`: solver timeout in milliseconds
-- `optimization_level`: optimization mode for CHC generation.
-  - `OptimizationLevel.NONE`: baseline encoding
-  - `OptimizationLevel.BASIC`: enable lightweight static simplifications
-
-### Return Value
-
-`CHC_Verification(...)` returns a `ReturnValue` object with fields:
-
-- `status`: overall `PASSED` / `FAILED` / `UNKNOWN`
-- `error`: `ReturnError.SUCCESS` / `ERROR` / `UNKNOWN`
-- `expr`: short status message
-- `advice`: guidance text
-- `heading_grid_safe`: `PASSED` / `FAILED` / `UNKNOWN`
-- `build_time`: fixedpoint construction time (seconds)
-- `solve_times`: list of per-property solve times (seconds)
-- `passing_properties`: list of `[name, invariant]`
-- `failing_properties`: list of `[name, counterexample]`
-- `unknown_properties`: list of property names with unknown verdict
-
-## Setup
-
-Use Python 3.11+ and install dependencies in a virtual environment.
-
-```bash
-cd Chiron-Framework/ChironCore
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -U pip
-python -m pip install antlr4-python3-runtime==4.13.2 networkx numpy z3-solver
-```
-
-Environment activation should be done from `Chiron-Framework/ChironCore`
-
-## Running Instructions (API Usage)
-
-1. Activate environment from `Chiron-Framework/ChironCore`.
-2. Switch to `CHC-Verification` to run verification commands.
-
-```bash
-cd Chiron-Framework/ChironCore
-source .venv/bin/activate
-cd ../../CHC-Verification
-```
-
-### Example
-
-```python
-from safety_properties import CHC_Verification
-from variable_name_detection_in_IR import OptimizationLevel
-
-class UserProperty:
-  def __init__(self, name, expr):
-    self.name = name
-    self.expr = expr
-
-result = CHC_Verification(
-  file_name="correctness_tests/programs/loop_accum.tl",
-  mode="default",
-  user_properties=[UserProperty("x_nonneg", "x >= 0")],
-  optimization_level=OptimizationLevel.BASIC,
-)
-print(result.status, result.expr)
-```
-
-### Short Specific Example
-
-```python
-result = CHC_Verification(
-  file_name="correctness_tests/programs/param_loop.tl",
-  mode="specific",
-  user_properties=[UserProperty("acc_nonneg", "acc >= 0")],
-  params="{':start': 0, ':step': 1}",
-  property_scope="all",
-)
-print(result.status)
-```
-
-### Short Universal + Terminating Example
-
-```python
-result = CHC_Verification(
-  file_name="correctness_tests/programs/u_clamp_to_zero.tl",
-  mode="universal",
-  user_properties=[UserProperty("z_nonneg_at_end", "z >= 0")],
-  property_scope="terminating",
-)
-print(result.status)
-```
-
-## Property Expression Language
-
-Property strings can reference:
-
-- turtle state: `xcor`, `ycor`, `heading`, `pendown`
-- user variables discovered from program
-- loop counters discovered from `repeat`
-- boolean combinators: `And(...)`, `Or(...)`, `Not(...)`
-- arithmetic/comparison operators supported by Z3 expressions
-
-Examples:
-
-- `"And(xcor >= 0, xcor <= 50)"`
-- `"Not(pendown)"`
-- `"Or(heading == 0, heading == 90, heading == 180, heading == 270)"`
-- `"acc >= 0"`
-
-## Notes and Current Limitations
-
-- A program that might violate the condition `heading % 15 == 0` at any point during execution may throw `UNKNOWN`
-- Some complex cases can return `UNKNOWN` under time limits, or may simply timeout
-- If heading-grid safety fails under strict semantics, the API returns `UNKNOWN` and skips subsequent property checks
-
-## Test Information
-
-Test suite details are documented separately in:
-`CHC-Verification/correctness_tests/README.md` and `CHC-Verification/performance_tests/README.md`
-
-Quick commands:
-
-```bash
-# Correctness suite
-cd CHC-Verification/correctness_tests
-python -m pytest -q
-
-# Performance suite
-cd CHC-Verification/performance_tests
-python -m pytest -q
-```
-
-Note: `CHC-Verification/performance_tests/pytest.ini` uses `-n auto`, so install
-`pytest-xdist` if parallel execution is unavailable by default.
+All setup, API usage, examples, hints/optimization behavior, property-expression
+syntax, and test-running instructions are documented in [USAGE.md](USAGE.md).
