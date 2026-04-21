@@ -1,0 +1,24 @@
+\section*{Future Work}
+Future work to make the verifier stronger and easier to use includes:
+\begin{enumerate}
+    \item \textbf{ML-guided verification.} Many results become \texttt{UNKNOWN} because hints and solver settings are fixed. A useful next step is to use lightweight ML models over IR features (loop depth, branching, variable count, and property form) to choose hints, timeout values, and optimization levels automatically. This can reduce failed runs and improve solver performance on different program families.
+
+    \item \textbf{Generalize beyond the current heading-grid discipline.} The current verifier assumes heading values stay on a 15-degree grid. If this cannot be proved, verification often returns \texttt{UNKNOWN}. We plan to extend support to arbitrary angles by adding stronger handling of non-linear trigonometric updates, using sound abstractions, piecewise-linear approximations, or non-linear solver backends.
+    
+    \item \textbf{A portfolio of multiple SMT solvers.} The current pipeline depends on one Horn-clause solving stack. A solver portfolio can run multiple backends with fallback per property and return the strongest result available (\texttt{PASSED}/\texttt{FAILED} preferred over \texttt{UNKNOWN}) under a shared timeout policy.
+
+    \item \textbf{Extra properties and richer user semantics.} Basic arithmetic, geometry, pen, and heading helpers already exist. Next, we should add higher-level property types such as temporal properties (\texttt{always(phi)}, \texttt{eventually(phi)}, \texttt{until(phi, psi)}), bounded-step goals (\texttt{within\_k\_steps(phi, k)}), monotonicity checks (\texttt{monotonic\_nondecreasing(v)}), and richer geometric regions (such as polygon containment). This would let users express trace-level behavior, not just state-level constraints, while still compiling safely to CHC formulas.
+    
+    \item \textbf{Counterexamples that teach.} Failed queries currently return solver-level outputs that are hard to read. Future versions should rebuild source-level traces, mark the first instruction where the property breaks, and show a minimal witness over only relevant variables. This would make failures easier to debug and learn from.
+    
+    \item \textbf{Scalability.} Universal mode and deep control flow increase relation size and rule count, which hurts runtime and raises \texttt{UNKNOWN} rates. A key direction is parallelism: multi-threaded checking of independent property batches, concurrent solver portfolios with shared timeout budgets, and parallel preprocessing (IR analysis, slicing, and summarization). Along with compositional summaries and incremental caching, this can improve throughput and reduce wall-clock time on multi-core machines.
+    
+    \item \textbf{Optimisations.} Beyond current basic optimizations, we plan the following sound performance improvements:
+    \begin{itemize}
+        \item \textbf{Property-impact slicing:} keep only instructions and variables that can affect a given property, and generate smaller CHC systems.
+        \item \textbf{Adaptive timeout scheduling:} assign per-property timeout budgets from simple complexity signals instead of one fixed timeout.
+        \item \textbf{Parallel property queues:} solve independent properties on worker threads and merge results in deterministic API order.
+        \item \textbf{Incremental lemma reuse:} reuse learned invariants across scopes (\texttt{all}, \texttt{terminating}, \texttt{at\_pc}, \texttt{upto\_pc}) for the same IR.
+        \item \textbf{Counterexample-guided refinement:} when a query is \texttt{UNKNOWN}, refine only ambiguous transitions instead of strengthening the full model.
+    \end{itemize}
+\end{enumerate}
