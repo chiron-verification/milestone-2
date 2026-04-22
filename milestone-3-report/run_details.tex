@@ -253,6 +253,8 @@ python chiron.py -chc [options] <program.tl>
 \addlinespace
 \texttt{-chc\_props} & \textit{(none)} & Properties to verify, as a semicolon-separated list of \texttt{name:expr} pairs. \texttt{name} is a label; \texttt{expr} may be a raw Z3-style expression (e.g.\ \texttt{x >= 0}) \emph{or} a semantic helper call (e.g.\ \texttt{is\_nonnegative(x)}, \texttt{position\_in\_box(-100,100,-100,100)}); both are accepted and helper calls are transpiled automatically. Variable names omit the \texttt{:} prefix. Example: \mbox{\texttt{"x\_pos:is\_nonnegative(x);y\_bound:y <= 100"}}. Omitting this flag runs the heading-grid check only. \\
 \addlinespace
+\texttt{-chc\_ranges} & \textit{(none)} & Input variable bounds for \texttt{universal} mode, as a Python dict literal. Keys are bare variable names (no \texttt{:}). Values may be an \texttt{int} (fixed constant), a \texttt{(lo, hi)} tuple (inclusive), or \texttt{None} (unconstrained). Example: \mbox{\texttt{-chc\_ranges '\{"x": (0, 100), "step": 1\}'}}. Only valid with \texttt{-chc\_mode universal}. \\
+\addlinespace
 \texttt{-chc\_scope} & \texttt{all} & Property scope. Choices: \texttt{all}, \texttt{terminating}, \texttt{at\_pc}, \texttt{upto\_pc}. \\
 \addlinespace
 \texttt{-chc\_pc} & \textit{(none)} & Target PC (integer) for \texttt{at\_pc} or \texttt{upto\_pc} scope. \\

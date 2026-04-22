@@ -259,6 +259,16 @@ if __name__ == "__main__":
              "heading_on_grid_always, check_termination, always_terminates.",
     )
     cmdparser.add_argument(
+        "-chc_ranges",
+        "--chcRanges",
+        type=ast.literal_eval,
+        default=None,
+        help="Input variable bounds for 'universal' mode, as a Python dict. "
+             "Keys are bare variable names (no ':'). Values may be an int (fixed), "
+             "a (lo, hi) tuple (inclusive), or None (unconstrained). "
+             "Example: -chc_ranges '{\"x\": (0, 100), \"y\": None}'",
+    )
+    cmdparser.add_argument(
         "-chc_opt",
         "--chcOpt",
         default="NONE",
