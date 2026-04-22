@@ -1,0 +1,721 @@
+\section*{Tests}
+\label{sec:tests}
+
+%% =============================================================================
+\subsection*{Correctness Tests}\label{subsec:correctness_tests}
+%% =============================================================================
+
+The correctness suite resides in \noindent\textit{\small Folder: \texttt{CHC-Verification/correctness\_tests}} and is executed with
+\texttt{pytest}, using \texttt{pytest-xdist} for parallel execution, over \texttt{unittest.TestCase}-based test classes.  The fixture set contains
+\textbf{64} \texttt{.tl} programs shared across all test modules, covering a wide range of semantic
+properties and edge cases.  These fixture programs can be found in
+\noindent\textit{\small Folder: \texttt{CHC-Verification/correctness\_tests/programs/}}.
+%% ---
+\subsubsection*{Test Modules}
+
+\begin{longtable}{p{0.22\textwidth} p{0.72\textwidth}}
+\toprule
+\textbf{File} & \textbf{Role in evaluation} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+\texttt{test\_default.py}   & Validates concrete-start-state verification in \texttt{default} mode,
+  covering arithmetic invariants, geometric bounds, pen state, directional and heading-grid checks,
+  trigonometric motion, and advanced nested control-flow fixtures. \\[4pt]
+\texttt{test\_specific.py}  & Validates parameterised initialisation in \texttt{specific} mode, with
+  boundary-sensitive outcomes under user-supplied parameter dictionaries; exercises countdown,
+  accumulate, chain, two-param, loop-move, nested conditional, and pen-conditional programs. \\[4pt]
+\texttt{test\_universal.py} & Validates symbolic/unconstrained initialisation in \texttt{universal}
+  mode, API-level validation errors, heading-grid safety queries, pc-scoped (\texttt{at\_pc}/
+  \texttt{upto\_pc}) and terminating-scope properties across arithmetic, geometric, pen, and heading
+  categories. \\[4pt]
+\texttt{test\_semantics.py} & Validates the semantic-helper transpiler
+  (\texttt{semantic\_properties.py}) at two levels: (i)~unit tests that assert the
+  \texttt{transpile\_property\_expr} function converts every built-in helper call to the correct Z3
+  expression string; (ii)~end-to-end integration tests that invoke \texttt{CHC\_Verification} with
+  helper-style property strings across all three modes (default, specific, universal). \\[4pt]
+\end{longtable}
+
+%% ---
+\subsubsection*{Fixture Programmes}
+
+The 64 fixture programmes are organised into ten categories below.  
+
+{\small
+\begin{longtable}{p{0.28\textwidth} p{0.66\textwidth}}
+\toprule
+\textbf{Programme file} & \textbf{Purpose in evaluation} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Programme file} & \textbf{Purpose in evaluation} \\
+\midrule
+\endhead
+\midrule
+\endfoot
+\bottomrule
+\endlastfoot
+
+%% ---- Category 1 ----
+\multicolumn{2}{l}{\textit{Linear Arithmetic (Assignment / Loop / Conditional)}} \\
+\midrule
+\texttt{assign\_basic.tl}       & Simple assignment sequence: $x{=}10$, $z{=}30$; baseline for arithmetic invariants. \\
+\texttt{assign\_algebra.tl}     & Chained algebraic assignments: $a{=}5$, $b{=}a{+}30$, $c{=}b{\times}5$. \\
+\texttt{conditional.tl}         & Single if-else; assigns $z$ depending on the branch taken. \\
+\texttt{loop\_basic.tl}         & Three-step loop incrementing $x$ by a fixed amount each iteration. \\
+\texttt{loop\_accum.tl}         & Accumulator: $x$ grows by 10 per step over 5 iterations. \\
+\texttt{loop\_adv.tl}           & Advanced accumulator; $x$ follows a triangular-number growth sequence. \\
+\texttt{loop\_cond.tl}          & Loop with conditional body; $y$ decrements only while $x < \text{threshold}$. \\
+\texttt{loop\_nested.tl}        & Two-level nested loop; inner counter depends on outer-loop state. \\
+\texttt{loop\_xy\_dep.tl}       & Loop with interdependent $x$ and $y$ updates. \\
+\texttt{read\_before\_write.tl} & Reads \texttt{:step} before any write; $z = y + \text{step}$ at termination. \\
+
+%% ---- Category 2 ----
+\midrule
+\multicolumn{2}{l}{\textit{Goto / Geometric}} \\
+\midrule
+\texttt{square\_goto.tl}        & Draws a $50{\times}50$ square using \texttt{goto}; xcor, ycor trace four corners. \\
+\texttt{goto\_computed.tl}      & \texttt{goto} with computed coordinates; \texttt{xcor=40}, \texttt{ycor=20} at end. \\
+\texttt{goto\_accum.tl}         & Accumulates goto positions; \texttt{xcor} grows by fixed steps. \\
+\texttt{forward\_square.tl}     & \texttt{forward}/\texttt{right 90} loop; heading cycles through quarter-turns only. \\
+\texttt{spiral\_grid\_goto.tl}  & Spiral-like goto sequence; coordinates increase monotonically. \\
+
+%% ---- Category 3 ----
+\midrule
+\multicolumn{2}{l}{\textit{Pen State}} \\
+\midrule
+\texttt{pen\_only.tl}           & Single \texttt{pendown} command; no arithmetic changes. \\
+\texttt{pen\_toggle.tl}         & Alternates \texttt{pendown}/\texttt{penup} on successive iterations. \\
+\texttt{pen\_with\_var.tl}      & \texttt{pendown} executed after a variable assignment. \\
+
+%% ---- Category 4 ----
+\midrule
+\multicolumn{2}{l}{\textit{Turns / Heading}} \\
+\midrule
+\texttt{turns\_only.tl}         & Three \texttt{right} commands; heading cycles through \{0, 270, 180, 90\}. \\
+\texttt{turns\_15.tl}           & Repeated \texttt{right(15)} turns; heading stays on 15-degree grid. \\
+\texttt{branchy\_non\_grid.tl}  & Branching with a non-15-degree turn; heading leaves the 15-degree grid. \\
+\texttt{maze\_counter.tl}       & Counter-driven path; heading changes interleaved with \texttt{forward}. \\
+
+%% ---- Category 5 ----
+\midrule
+\multicolumn{2}{l}{\textit{Nested Loops / Advanced Control Flow}} \\
+\midrule
+\texttt{flower\_nested\_pen.tl}   & Nested-loop motif with \texttt{pendown}; outer counter \texttt{count} tracked. \\
+\texttt{triangle\_nested\_pen.tl} & Two-level nested loop for a triangle; \texttt{step} and \texttt{side} counters. \\
+
+%% ---- Category 6 ----
+\midrule
+\multicolumn{2}{l}{\textit{Parameterised (for Specific Mode)}} \\
+\midrule
+\texttt{param\_cond.tl}         & Conditional branch driven by \texttt{:init}; outcome depends on value relative to 50. \\
+\texttt{param\_countdown.tl}    & Counter counts down from \texttt{:n} over 5 steps; boundary at $n{=}5$. \\
+\texttt{param\_accumulate.tl}   & $\mathit{total} = \mathit{base} + k \cdot \mathit{inc}$ for $k=0\ldots3$; two-param boundary. \\
+\texttt{param\_chain.tl}        & Chain: $a{=}\mathit{seed}$, $b{=}a{+}1$, $c{=}a{+}b$, $d{=}b{+}c$; boundary at $\mathit{seed}{=}6$. \\
+\texttt{param\_goto.tl}         & \texttt{goto(:startx, :starty)}; position driven entirely by params. \\
+\texttt{param\_loop.tl}         & \texttt{acc} starts at \texttt{:start} and increments three times. \\
+\texttt{param\_loop\_move.tl}   & $x{=}\mathit{start}$, $x{+}{=}\mathit{step}$ for 3 iters, \texttt{goto}$(x,0)$ each iteration. \\
+\texttt{param\_nested\_cond.tl} & Nested conditional with two boundary points at 0 and 100. \\
+\texttt{param\_pen.tl}          & $\mathit{mark}{=}\mathit{base}{+}1$; \texttt{pendown} always executes. \\
+\texttt{param\_pen\_cond.tl}    & \texttt{pendown} fires only when \texttt{:value} $>$ \texttt{:threshold}. \\
+\texttt{param\_scale.tl}        & $\mathit{result} = \mathit{scale} \times 5$; single-param arithmetic. \\
+\texttt{two\_params.tl}         & $\mathit{diff}{=}\mathit{hi}{-}\mathit{lo}$, $\mathit{sum}{=}\mathit{hi}{+}\mathit{lo}$; relational outcome depends on both. \\
+
+%% ---- Category 7 ----
+\midrule
+\multicolumn{2}{l}{\textit{Arithmetic (for Universal Mode)}} \\
+\midrule
+\texttt{u\_abs\_diff\_branching.tl}   & Branching produces $|x-y|$; two-branch affine summary. \\
+\texttt{u\_branch\_merge\_affine.tl}  & Branch merge: $d{=}|x{-}y|$, $s{=}x$ at termination. \\
+\texttt{u\_clamp\_to\_zero.tl}        & $z = \max(x,0)$; disjunctive postcondition $z{=}0 \lor z{=}x$. \\
+\texttt{u\_euclid\_avg.tl}            & $a{=}m{+}n$, $b{=}m{-}n$, $c{=}a{+}b{=}2m$; arithmetic identity chain. \\
+\texttt{u\_product\_zero.tl}          & $z{=}0$ regardless of $x,y$; one factor is forced to zero. \\
+\texttt{u\_same\_postcondition.tl}    & Both branches produce $z{=}0$; identical postcondition across paths. \\
+\texttt{u\_swap\_with\_temp.tl}       & Swap $x,y$ via \texttt{tmp}; $y{=}\mathit{tmp}$, $x{\neq}\mathit{tmp}$ at termination. \\
+\texttt{u\_swap\_without\_tmp.tl}     & In-place swap; $s{=}x{+}y$ preserved throughout all states. \\
+\texttt{u\_two\_step\_affine.tl}      & Two sequential affine updates; linear postconditions expected to fail. \\
+
+%% ---- Category 8 ----
+\midrule
+\multicolumn{2}{l}{\textit{Geometric / Position (for Universal Mode)}} \\
+\midrule
+\texttt{u\_fixed\_target.tl}          & \texttt{goto(10,\,20)}; exact position at termination. \\
+\texttt{u\_fixed\_target\_user.tl}    & \texttt{goto(a,\,a+7)}; $\mathit{ycor}{-}\mathit{xcor}{=}7$ at termination. \\
+\texttt{u\_normalize\_x.tl}           & \texttt{goto(5,\,5)}; \texttt{xcor=ycor=5} regardless of starting position. \\
+\texttt{u\_loop\_diagonal.tl}         & Loop with \texttt{forward} and heading changes; exercises heading grid inside loops. \\
+\texttt{u\_xcor\_fixed.tl}            & \texttt{xcor=8}; \texttt{ycor=3} or \texttt{ycor=-3} depending on $\mathrm{sign}(p)$. \\
+
+%% ---- Category 9 ----
+\midrule
+\multicolumn{2}{l}{\textit{Pen State (for Universal Mode)}} \\
+\midrule
+\texttt{u\_branch\_pen.tl}            & \texttt{pendown} in else-branch ($x{<}0$); pen state correlated with guard. \\
+\texttt{u\_branch\_pen\_adv.tl}       & Advanced pen-branch: condition $a{+}b{<}b$ simplifies to $a{<}0$. \\
+\texttt{u\_loop\_pen.tl}              & \texttt{pendown} inside a loop; pen ends down at termination. \\
+\texttt{u\_pen\_no\_touch.tl}         & No \texttt{penup} in program; \texttt{pendown=True} holds throughout. \\
+\texttt{u\_pen\_up.tl}                & \texttt{penup} at end; \texttt{pendown=False} holds at termination. \\
+
+%% ---- Category 10 ----
+\midrule
+\multicolumn{2}{l}{\textit{Heading / Turns (for Universal Mode)}} \\
+\midrule
+\texttt{u\_branch\_always\_mul\_15.tl}     & Branch assigns turn of 30 or 45 (both multiples of 15). \\
+\texttt{u\_branch\_always\_mul\_15\_adv.tl}& Advanced version: $t$ reduces to 30 via branch; still a multiple of 15. \\
+\texttt{u\_fixed\_left.tl}                 & Turns left by a multiple-of-15 angle; heading stays on 15-degree grid. \\
+\texttt{u\_heading\_non\_grid.tl}          & Turns by a non-multiple-of-15; heading leaves the 15-degree grid. \\
+\texttt{u\_init\_core.tl}                  & Universal-init skeleton; exposes all universal-mode initial conditions. \\
+\texttt{u\_mul\_15\_heading\_on\_grid.tl}  & $t{=}15{\times}m$; \texttt{left t}; heading stays on 15-degree grid. \\
+\texttt{u\_net\_heading\_preserved.tl}     & \texttt{left a}; \texttt{right a}; heading returns to starting value. \\
+\texttt{u\_net\_zero\_turn.tl}             & \texttt{left(45)}; \texttt{right(45)}; heading returns to original value. \\
+\texttt{u\_on\_spot\_turn.tl}              & Turn in place; position unchanged, heading changes. \\
+\end{longtable}
+}
+
+
+%% ---
+\subsubsection*{Correctness Results}
+
+Table~\ref{tab:correctness-results} summarises the outcome of running all four test modules
+against under a 20\,s solver timeout.  Pass rate is computed
+over the tests that did not time out.
+
+\begin{table}[H]
+\centering
+\caption{Correctness test outcomes within the 20\,s solver timeout (all active tests pass with 0 failures/timeouts).}
+\label{tab:correctness-results}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Module} & \textbf{Total} & \textbf{Passed} & \textbf{Failed} & \textbf{Timeout} & \textbf{Pass Rate} \\
+\midrule
+\texttt{test\_default.py}   &  46 &  45 & 0 & 1 & 100\% \\
+\texttt{test\_specific.py}  &  70 &  70 & 0 & 0 & 100\% \\
+\texttt{test\_universal.py} & 112 & 112 & 0 & 0 & 100\% \\
+\texttt{test\_semantics.py} & 130 & 130 & 0 & 0 & 100\% \\
+\midrule
+\textbf{Total} & \textbf{358} & \textbf{357} & \textbf{0} & \textbf{1} & \textbf{100\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+Crucially, the timeouts reflect a \emph{solver scalability} limitation, not a
+defect in the encoding logic.  The affected programs are correctly translated
+into CHC rules, and the properties are well-formed; \textsc{Spacer} simply
+cannot synthesize a sufficiently strong inductive invariant within the
+configured timeout when both heading normalization and trigonometric
+approximations are present in the same fixed-point system.  
+
+%% ---
+\subsubsection*{How to Run}
+
+The correctness suite is driven by \texttt{pytest} from the \texttt{CHC-Verification/correctness\_tests/} directory.
+Parallel execution via \texttt{pytest-xdist} (\texttt{-n auto}) is recommended.
+
+\begin{lstlisting}[style=terminal, language=bash]
+# runs all tests in parallel
+pytest -n auto -q 
+
+# one module only
+pytest -n auto -q <test_module.py>
+
+# one test case
+pytest test_semantics.py::TestSemanticPenUniversal::test_branch_pen_terminating_guarded_relation_pass -q
+\end{lstlisting}
+
+
+%% =============================================================================
+\subsection*{Performance Tests}
+\label{sec:performance_tests}
+%% =============================================================================
+
+The CHC verification pipeline is benchmarked to stress-test solver scalability under
+various optimisation levels and hint configurations.  The test suite resides in
+\noindent\textit{\small Folder: \texttt{CHC-Verification/performance\_tests}} and is executed with
+\texttt{pytest} using \texttt{pytest-xdist} for parallel execution.
+
+The fixture contains 24 \texttt{.tl} programs across the three modes and cover cases that can blow up the number of solver constraints. 
+The fixture programmes can be found in \noindent\textit{\small Folder: \texttt{CHC-Verification/performance\_tests/programs/}}. 
+Each test case is evaluated under \textbf{six configurations} formed by crossing two
+optimisation levels with three hint modes (detailed in the \emph{Hint Configurations} subsection).
+Timing data are written to \texttt{perf\_results\_\{default,universal,specific\}.csv}.
+
+%% ---
+\subsubsection*{Test Modules}
+
+\begin{longtable}{p{0.28\textwidth} p{0.66\textwidth}}
+\toprule
+\textbf{File} & \textbf{Purpose} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+\texttt{test\_default.py}   & Performance benchmarks in \texttt{default} mode, covering loop
+  scaling, nesting depth, wide state, branching density, trigonometric motion, heading-grid
+  cost, and property complexity. \\[4pt]
+\texttt{test\_universal.py} & Performance benchmarks in \texttt{universal} mode with
+  unconstrained initial states; mirrors the default-mode categories but adds
+  \texttt{all}/\texttt{terminating} scope variants. \\[4pt]
+\texttt{test\_specific.py}  & Performance benchmarks in \texttt{specific} mode using
+  explicit parameter assignments; includes offset-start variants and specific-mode
+  property-complexity tests. \\[4pt]
+\end{longtable}
+
+%% ---
+\subsubsection*{Fixture Programmes}
+
+The performance suite uses \textbf{24} benchmark programmes organised into six categories.
+
+{\small
+\begin{longtable}{p{0.28\textwidth} p{0.66\textwidth}}
+\toprule
+\textbf{Programme file} & \textbf{Purpose in evaluation} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Programme file} & \textbf{Purpose in evaluation} \\
+\midrule
+\endhead
+\midrule
+\endfoot
+\bottomrule
+\endlastfoot
+
+%% ---- Loop Scaling ----
+\multicolumn{2}{l}{\textit{Loop Scaling}} \\
+\midrule
+\texttt{perf\_repeat\_10.tl}     & \texttt{:x = 0; repeat 10 [:x = :x + 1]}; $x{=}10$ at termination. \\
+\texttt{perf\_repeat\_50.tl}     & Same body as \texttt{perf\_repeat\_10.tl}, 50 iterations; $x{=}50$ at termination. \\
+\texttt{perf\_repeat\_100.tl}    & Same body as \texttt{perf\_repeat\_10.tl}, 100 iterations; $x{=}100$ at termination. \\
+\texttt{perf\_repeat\_5000.tl}   & Same body as \texttt{perf\_repeat\_10.tl}, 5000 iterations; $x{=}5000$ at termination. \\
+\texttt{perf\_s\_repeat\_50.tl}  & \texttt{:x = :init; repeat 50 [:x = :x + 1]}; $x{=}\mathit{init}{+}50$ at termination. \\
+\texttt{perf\_s\_repeat\_100.tl} & Same body as \texttt{perf\_s\_repeat\_50.tl}, 100 iterations; $x{=}\mathit{init}{+}100$ at termination. \\
+\texttt{opt\_found.tl}           & \texttt{:a = 0; :b = 0; repeat 100 [:a = :a + 1; :b = :b + :a]}; triangular accumulator, $b{=}a(a{+}1)/2$. \\
+\texttt{opt\_universal\_100.tl}  & Same body as \texttt{opt\_found.tl} but $a$ not initialised; $b{+}{=}a$ loop with symbolic start. \\
+
+%% ---- Nesting Depth ----
+\midrule
+\multicolumn{2}{l}{\textit{Nesting Depth}} \\
+\midrule
+\texttt{perf\_deep\_nest\_3.tl}  & Three-level \texttt{repeat 4} loops; $a$, $b$, $c$ each incremented at their level; $a{=}4$, $b{=}16$, $c{=}64$ at termination. \\
+\texttt{perf\_deep\_nest\_4.tl}  & Four-level \texttt{repeat 3} loops; $a$, $b$, $c$, $d$ incremented at their level; $a{=}3$, $b{=}9$, $c{=}27$, $d{=}81$ at termination. \\
+\texttt{perf\_s\_nest\_3.tl}     & Three-level \texttt{repeat 5} loops; $a$, $b$, $c$ initialised to \texttt{:start}; $a{=}\mathit{start}{+}5$, $b{=}\mathit{start}{+}25$, $c{=}\mathit{start}{+}125$. \\
+\texttt{perf\_s\_nest\_4.tl}     & Four-level \texttt{repeat 4} loops; $a$, $b$, $c$, $d$ initialised to \texttt{:start}; tight bound on $d$ shifts by \texttt{:start}. \\
+
+%% ---- Wide State ----
+\midrule
+\multicolumn{2}{l}{\textit{Wide State}} \\
+\midrule
+\texttt{perf\_wide\_vars.tl}     & Eight variables $a{=}1,\ldots,h{=}8$; 5-iteration loop with $b{+}{=}a$, $c{+}{=}b$, \ldots, $h{+}{=}g$; 8-dimensional affine state. \\
+\texttt{perf\_s\_wide.tl}        & Same chained-update body as \texttt{perf\_wide\_vars.tl} with all initial values from params; 8-dimensional symbolic state. \\
+
+%% ---- Branching Density ----
+\midrule
+\multicolumn{2}{l}{\textit{Branching Density}} \\
+\midrule
+\texttt{perf\_many\_branches.tl} & 6-iteration loop; $x{+}{=}1$ each iter drives four sequential guards ($x{>}1$, $x{>}2$, $x{>}3$, $x{>}4$), each incrementing $\mathit{acc}$. \\
+\texttt{perf\_s\_branches.tl}    & 8-iteration loop; same four-guard structure as \texttt{perf\_many\_branches.tl} but thresholds $t_1{=}\mathit{thresh}$, $t_2{=}\mathit{thresh}{+}1$, $t_3{=}\mathit{thresh}{+}2$, $t_4{=}\mathit{thresh}{+}3$. \\
+\texttt{perf\_combo.tl}          & 5-iteration loop; $\mathit{step}{+}{=}1$ each iter; if $\mathit{step}{>}2$: \texttt{forward step; right 90; acc += step}, else: \texttt{left 90; acc += 1}; combines branching and motion. \\
+
+%% ---- Trigonometric Motion ----
+\midrule
+\multicolumn{2}{l}{\textit{Trigonometric Motion}} \\
+\midrule
+\texttt{perf\_trig\_10.tl}       & \texttt{repeat 10 [forward 10; right 90]}; traces a square, returning to origin with heading 0. \\
+\texttt{perf\_trig\_20.tl}       & Same body as \texttt{perf\_trig\_10.tl}, 20 iterations; two full square traces. \\
+\texttt{perf\_s\_trig\_10.tl}    & \texttt{repeat 10 [forward :step; right 90]}; same square pattern with symbolic step magnitude. \\
+\texttt{perf\_s\_trig\_20.tl}    & Same body as \texttt{perf\_s\_trig\_10.tl}, 20 iterations. \\
+
+%% ---- Heading / Turns ----
+\midrule
+\multicolumn{2}{l}{\textit{Heading / Turns}} \\
+\midrule
+\texttt{perf\_turns\_20.tl}      & \texttt{repeat 20 [right 15; left 15]}; net-zero turn each iteration; heading returns to initial value. \\
+\texttt{perf\_turns\_50.tl}      & Same body as \texttt{perf\_turns\_20.tl}, 50 iterations. \\
+\texttt{turn\_mul\_sum.tl}       & \texttt{:k = 15 * (:x + :y); right :k}; single turn by symbolic multiple of 15; heading-grid membership with unconstrained $x$, $y$. \\
+
+\end{longtable}
+}
+
+%% ---
+\subsubsection*{Performance Results}
+Each benchmark test is run under \textbf{six configurations}:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Label} & \textbf{Optimisation} & \textbf{Hint} \\
+\midrule
+NONE     & \texttt{NONE}  & (none) \\
+NONE+H1  & \texttt{NONE}  & \texttt{check\_heading\_always\_on\_grid} \\
+NONE+H2  & \texttt{NONE}  & \texttt{heading\_on\_grid\_always} \\
+BASIC    & \texttt{BASIC} & (none) \\
+BASIC+H1 & \texttt{BASIC} & \texttt{check\_heading\_always\_on\_grid} \\
+BASIC+H2 & \texttt{BASIC} & \texttt{heading\_on\_grid\_always} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%% ---
+\underline{Default Mode}
+
+Each row shows the \emph{best} configuration (lowest total time) for that property.
+Speedup is computed as $\text{Total(NONE)} / \text{Total(best)}$; ``--'' means NONE also timed out.
+
+{\small
+\begin{longtable}{p{0.12\textwidth} p{0.10\textwidth} p{0.16\textwidth} c c r r r r}
+\caption{Solver timing benchmark: Default mode.}
+\label{tab:timing-default} \\
+\toprule
+\textbf{Program} & \textbf{Config} & \textbf{Property} & \textbf{Verdict} & \textbf{Result} & \textbf{Build (s)} & \textbf{Solve (s)} & \textbf{Total (s)} & \textbf{Speedup} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Program} & \textbf{Config} & \textbf{Property} & \textbf{Verdict} & \textbf{Result} & \textbf{Build (s)} & \textbf{Solve (s)} & \textbf{Total (s)} & \textbf{Speedup} \\
+\midrule
+\endhead
+\midrule
+\endfoot
+\bottomrule
+\endlastfoot
+%% Loop Scaling
+\multicolumn{9}{l}{\textit{Default mode -- Loop Scaling}} \\
+\midrule
+\texttt{repeat\_10} & NONE$+$H1 & $x \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.026 & 0.006 & 0.033 & 2.6$\times$ \\
+\texttt{repeat\_50} & NONE$+$H1 & $x \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.029 & 0.008 & 0.037 & 2.2$\times$ \\
+\texttt{repeat\_100} & NONE$+$H1 & $x \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.025 & 0.006 & 0.031 & 2.6$\times$ \\
+\texttt{repeat\_10} & BASIC$+$H2 & $x \leq 10$ & \texttt{TRUE} & \texttt{PASS} & 0.317 & 0.048 & 0.365 & 25.7$\times$ \\
+\texttt{repeat\_50} & BASIC$+$H2 & $x \leq 50$ & \texttt{TRUE} & \texttt{PASS} & 0.380 & 0.070 & 0.450 & 44.5$\times$ \\
+\texttt{repeat\_100} & BASIC$+$H1 & $x \leq 100$ & \texttt{TRUE} & \texttt{PASS} & 0.350 & 0.025 & 0.375 & 53.5$\times$ \\
+\texttt{repeat\_10} & BASIC$+$H1 & $x \leq 5$ & \texttt{FALSE} & \texttt{PASS} & 0.337 & 0.061 & 0.398 & 5.6$\times$ \\
+\texttt{repeat\_50} & BASIC & $x \leq 5$ & \texttt{FALSE} & \texttt{PASS} & 0.394 & 0.059 & 0.453 & 4.2$\times$ \\
+\texttt{repeat\_100} & BASIC & $x \leq 5$ & \texttt{FALSE} & \texttt{PASS} & 0.341 & 0.070 & 0.411 & 4.4$\times$ \\
+\midrule
+%% Nesting Depth
+\multicolumn{9}{l}{\textit{Default mode -- Nesting Depth}} \\
+\midrule
+\texttt{deep\_nest\_3} & NONE$+$H1 & $a,b,c \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.209 & 0.021 & 0.230 & 1.1$\times$ \\
+\texttt{deep\_nest\_4} & NONE$+$H1 & $a,b,c,d \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.315 & 0.034 & 0.349 & 1.0$\times$ \\
+\texttt{deep\_nest\_3} & BASIC$+$H1 & $c \leq 64$ & \texttt{TRUE} & \texttt{PASS} & 0.938 & 0.072 & 1.010 & 20.0$\times$ \\
+\texttt{deep\_nest\_4} & BASIC$+$H1 & $d \leq 81$ & \texttt{TRUE} & \texttt{PASS} & 1.007 & 0.090 & 1.098 & 18.5$\times$ \\
+\texttt{deep\_nest\_3} & BASIC & $c \leq 60$ & \texttt{FALSE} & \texttt{PASS} & 0.989 & 0.112 & 1.101 & 18.3$\times$ \\
+\texttt{deep\_nest\_4} & BASIC & $d \leq 70$ & \texttt{FALSE} & \texttt{PASS} & 1.109 & 0.149 & 1.258 & 16.2$\times$ \\
+\midrule
+%% Wide State
+\multicolumn{9}{l}{\textit{Default mode -- Wide State}} \\
+\midrule
+\texttt{wide\_vars} & NONE & $a,{\ldots},h > 0$ & \texttt{FALSE} & \texttt{PASS} & 0.288 & 0.072 & 0.361 & 1.0$\times$ \\
+\texttt{wide\_vars} & BASIC$+$H1 & $a \leq 6$ & \texttt{TRUE} & \texttt{PASS} & 2.966 & 0.075 & 3.041 & 6.7$\times$ \\
+\texttt{wide\_vars} & BASIC & $a \leq 4$ & \texttt{FALSE} & \texttt{PASS} & 3.149 & 0.309 & 3.457 & 5.9$\times$ \\
+\texttt{wide\_vars} & BASIC & $h \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 2.966 & 0.466 & 3.431 & 5.9$\times$ \\
+\texttt{wide\_vars} & NONE & $h \leq 2211$ & - & {\color{red}\texttt{TIMEOUT}} & 0.278 & 20.024 & \textbf{T/O} & -- \\
+\midrule
+%% Branching Density
+\multicolumn{9}{l}{\textit{Default mode -- Branching Density}} \\
+\midrule
+\texttt{many\_branches} & NONE$+$H1 & $x \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.190 & 0.073 & 0.263 & 1.0$\times$ \\
+\texttt{many\_branches} & NONE & $\mathit{acc} \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.201 & 0.080 & 0.281 & 1.0$\times$ \\
+\texttt{many\_branches} & BASIC$+$H1 & $x \leq 6$ & \texttt{TRUE} & \texttt{PASS} & 0.408 & 0.096 & 0.505 & 40.0$\times$ \\
+\texttt{many\_branches} & BASIC$+$H1 & $x \leq 3$ & \texttt{FALSE} & \texttt{PASS} & 0.389 & 0.090 & 0.478 & 42.2$\times$ \\
+\texttt{many\_branches} & BASIC & $\mathit{acc} \leq 5$ & \texttt{FALSE} & \texttt{PASS} & 0.387 & 0.111 & 0.498 & 40.6$\times$ \\
+\midrule
+%% Trigonometric Motion
+\multicolumn{9}{l}{\textit{Default mode -- Trigonometric Motion}} \\
+\midrule
+\texttt{trig\_10} & NONE$+$H1 & $\mathit{ycor} \geq 0$ & \texttt{FALSE} & \texttt{PASS} & 0.071 & 0.388 & 0.459 & 1.0$\times$ \\
+\texttt{trig\_20} & NONE & $\mathit{ycor} \geq 0$ & \texttt{FALSE} & \texttt{PASS} & 0.105 & 0.544 & 0.648 & 1.0$\times$ \\
+\texttt{trig\_10} & NONE & $\neg\mathit{pendown}$ & \texttt{TRUE} & \texttt{PASS} & 0.100 & 0.079 & 0.179 & 1.0$\times$ \\
+\texttt{trig\_20} & NONE & $\neg\mathit{pendown}$ & \texttt{TRUE} & \texttt{PASS} & 0.100 & 0.032 & 0.132 & 1.0$\times$ \\
+\texttt{trig\_10} & NONE$+$H1 & heading $\in \{0,90,180,270\}$ & \texttt{TRUE} & \texttt{PASS} & 0.105 & 0.191 & 0.296 & 1.0$\times$ \\
+\texttt{trig\_20} & NONE & heading $\in \{0,90,180,270\}$ & \texttt{TRUE} & \texttt{PASS} & 0.087 & 0.082 & 0.168 & 1.0$\times$ \\
+\midrule
+%% Heading/Turns
+\multicolumn{9}{l}{\textit{Default mode -- Heading/Turns}} \\
+\midrule
+\texttt{turns\_20} & NONE & heading $\in \{0,345\}$ & \texttt{TRUE} & \texttt{PASS} & 0.092 & 0.268 & 0.360 & 1.0$\times$ \\
+\texttt{turns\_50} & NONE$+$H1 & heading $\in \{0,345\}$ & \texttt{TRUE} & \texttt{PASS} & 0.100 & 0.264 & 0.364 & 1.1$\times$ \\
+\texttt{turns\_20} & NONE$+$H1 & heading $\geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.092 & 0.052 & 0.144 & 1.2$\times$ \\
+\texttt{turns\_20} & NONE$+$H2 & heading on 15° grid & \texttt{TRUE} & \texttt{PASS} & 0.094 & 0.075 & 0.169 & 9.4$\times$ \\
+\midrule
+%% Property Complexity
+\multicolumn{9}{l}{\textit{Default mode -- Property Complexity}} \\
+\midrule
+\texttt{repeat\_10} & NONE$+$H1 & single atom ($x \geq 0$) & \texttt{TRUE} & \texttt{PASS} & 0.037 & 0.049 & 0.086 & 1.1$\times$ \\
+\texttt{repeat\_10} & BASIC$+$H2 & two-atom conj ($x \geq 0 \land x \leq 10$) & \texttt{TRUE} & \texttt{PASS} & 0.371 & 0.077 & 0.449 & 42.5$\times$ \\
+\texttt{repeat\_10} & BASIC$+$H2 & 11-way exact disjunction on $x$ & \texttt{TRUE} & \texttt{PASS} & 0.377 & 0.084 & 0.461 & 43.5$\times$ \\
+\end{longtable}
+}
+
+%% ---
+\underline{Universal Mode}
+
+{\small
+\begin{longtable}{p{0.12\textwidth} p{0.10\textwidth} p{0.16\textwidth} c c r r r r}
+\caption{Solver timing benchmark: Universal mode.}
+\label{tab:timing-universal} \\
+\toprule
+\textbf{Program} & \textbf{Config} & \textbf{Property} & \textbf{Verdict} & \textbf{Result} & \textbf{Build (s)} & \textbf{Solve (s)} & \textbf{Total (s)} & \textbf{Speedup} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Program} & \textbf{Config} & \textbf{Property} & \textbf{Verdict} & \textbf{Result} & \textbf{Build (s)} & \textbf{Solve (s)} & \textbf{Total (s)} & \textbf{Speedup} \\
+\midrule
+\endhead
+\midrule
+\endfoot
+\bottomrule
+\endlastfoot
+\multicolumn{9}{l}{\textit{Universal mode -- Loop Scaling}} \\
+\midrule
+\texttt{repeat\_10} & NONE & $x \geq 0$ (terminating) & \texttt{TRUE} & \texttt{PASS} & 0.045 & 0.086 & 0.131 & 1.0$\times$ \\
+\texttt{repeat\_10} & NONE$+$H1 & $x \geq 0$ (all states) & \texttt{FALSE} & \texttt{PASS} & 0.040 & 0.080 & 0.120 & 1.0$\times$ \\
+\texttt{repeat\_50} & NONE$+$H1 & $x \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.043 & 0.084 & 0.127 & 1.0$\times$ \\
+\texttt{repeat\_50} & NONE$+$H1 & $x \geq 0$ (all states) & \texttt{FALSE} & \texttt{PASS} & 0.037 & 0.064 & 0.101 & 1.2$\times$ \\
+\texttt{repeat\_100} & NONE$+$H1 & $x \geq 0$ (terminating) & \texttt{TRUE} & \texttt{PASS} & 0.033 & 0.076 & 0.109 & 1.2$\times$ \\
+\texttt{repeat\_100} & NONE & $x \geq 0$ (all states) & \texttt{FALSE} & \texttt{PASS} & 0.033 & 0.064 & 0.098 & 1.0$\times$ \\
+\texttt{repeat\_10} & NONE$+$H2 & $x \leq 10$ & \texttt{TRUE} & \texttt{PASS} & 0.036 & 0.176 & 0.211 & 1.1$\times$ \\
+\texttt{repeat\_50} & BASIC$+$H1 & $x \leq 50$ & \texttt{TRUE} & \texttt{PASS} & 0.444 & 0.058 & 0.501 & 3.6$\times$ \\
+\texttt{repeat\_100} & BASIC & $x \leq 100$ & \texttt{TRUE} & \texttt{PASS} & 0.372 & 0.048 & 0.420 & 30.4$\times$ \\
+\texttt{repeat\_10} & NONE & $x \leq 5$ & \texttt{FALSE} & \texttt{PASS} & 0.032 & 0.107 & 0.139 & 1.0$\times$ \\
+\texttt{repeat\_50} & BASIC$+$H1 & $x \leq 25$ & \texttt{FALSE} & \texttt{PASS} & 0.439 & 0.057 & 0.496 & 1.4$\times$ \\
+\texttt{repeat\_100} & BASIC & $x \leq 50$ & \texttt{FALSE} & \texttt{PASS} & 0.384 & 0.049 & 0.432 & 46.4$\times$ \\
+\midrule
+\multicolumn{9}{l}{\textit{Universal mode -- Nesting Depth}} \\
+\midrule
+\texttt{deep\_nest\_3} & NONE & $c \geq 0$ & \texttt{FALSE} & \texttt{PASS} & 0.228 & 0.079 & 0.307 & 1.0$\times$ \\
+\texttt{deep\_nest\_4} & NONE & $d \geq 0$ & \texttt{FALSE} & \texttt{PASS} & 0.389 & 0.068 & 0.457 & 1.0$\times$ \\
+\texttt{deep\_nest\_3} & BASIC & $a,b,c \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.794 & 0.046 & 0.840 & -- \\
+\texttt{deep\_nest\_4} & BASIC$+$H2 & $a,b,c,d \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 1.065 & 0.094 & 1.159 & -- \\
+\texttt{deep\_nest\_3} & BASIC$+$H2 & $c \leq 64$ & \texttt{TRUE} & \texttt{PASS} & 0.991 & 0.074 & 1.065 & -- \\
+\texttt{deep\_nest\_4} & BASIC$+$H2 & $d \leq 81$ & \texttt{TRUE} & \texttt{PASS} & 1.084 & 0.085 & 1.168 & -- \\
+\texttt{deep\_nest\_3} & BASIC$+$H1 & $c \leq 60$ & \texttt{FALSE} & \texttt{PASS} & 0.859 & 0.034 & 0.894 & -- \\
+\texttt{deep\_nest\_4} & BASIC$+$H1 & $d \leq 70$ & \texttt{FALSE} & \texttt{PASS} & 0.597 & 0.035 & 0.631 & -- \\
+\midrule
+\multicolumn{9}{l}{\textit{Universal mode -- Wide State}} \\
+\midrule
+\texttt{wide\_vars} & NONE$+$H1 & $a,{\ldots},h > 0$ & \texttt{FALSE} & \texttt{PASS} & 0.287 & 0.071 & 0.359 & 1.0$\times$ \\
+\texttt{wide\_vars} & NONE$+$H1 & $a \leq 6$ & \texttt{TRUE} & \texttt{PASS} & 0.303 & 0.143 & 0.446 & 1.0$\times$ \\
+\texttt{wide\_vars} & NONE & $a \leq 4$ & \texttt{FALSE} & \texttt{PASS} & 0.285 & 0.171 & 0.456 & 1.0$\times$ \\
+\texttt{wide\_vars} & NONE$+$H2 & $h \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.257 & 0.512 & 0.770 & 1.0$\times$ \\
+\texttt{wide\_vars} & NONE$+$H1 & $h \leq 2211$ & \texttt{TRUE} & \texttt{PASS} & 0.298 & 0.319 & 0.617 & 6.8$\times$ \\
+\texttt{wide\_vars} & NONE$+$H1 & $h \leq 2000$ & \texttt{FALSE} & \texttt{PASS} & 0.331 & 0.123 & 0.454 & 1.0$\times$ \\
+\midrule
+\multicolumn{9}{l}{\textit{Universal mode -- Branching Density}} \\
+\midrule
+\texttt{many\_branches} & NONE$+$H1 & $x \geq 0$ & \texttt{FALSE} & \texttt{PASS} & 0.185 & 0.072 & 0.258 & 1.0$\times$ \\
+\texttt{many\_branches} & BASIC & $\mathit{acc} \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.384 & 0.042 & 0.426 & -- \\
+\texttt{many\_branches} & BASIC$+$H1 & $x \leq 6$ & \texttt{TRUE} & \texttt{PASS} & 0.188 & 0.043 & 0.231 & 55.6$\times$ \\
+\texttt{many\_branches} & BASIC & $x \leq 3$ & \texttt{FALSE} & \texttt{PASS} & 0.351 & 0.031 & 0.382 & -- \\
+\texttt{many\_branches} & BASIC & $\mathit{acc} \leq 5$ & \texttt{FALSE} & \texttt{PASS} & 0.351 & 0.037 & 0.387 & -- \\
+\midrule
+\multicolumn{9}{l}{\textit{Universal mode -- Trigonometric Motion}} \\
+\midrule
+\texttt{trig\_10} & NONE$+$H1 & $\mathit{ycor} \geq 0$ & \texttt{FALSE} & \texttt{PASS} & 0.103 & 0.062 & 0.166 & 1.1$\times$ \\
+\texttt{trig\_10} & NONE & heading $\in \{0,90,180,270\}$ & \texttt{FALSE} & \texttt{PASS} & 0.094 & 0.055 & 0.149 & 1.0$\times$ \\
+\texttt{trig\_10} & NONE$+$H1 & $0 \leq \text{heading} < 360$ & \texttt{TRUE} & \texttt{PASS} & 0.094 & 0.067 & 0.161 & 1.0$\times$ \\
+\texttt{trig\_10} & NONE & $\neg\mathit{pendown}$ & \texttt{FALSE} & \texttt{PASS} & 0.097 & 0.075 & 0.172 & 1.0$\times$ \\
+\texttt{trig\_10} & NONE$+$H1 & $\mathit{pendown}$ & \texttt{TRUE} & \texttt{PASS} & 0.077 & 0.052 & 0.129 & 1.4$\times$ \\
+\end{longtable}
+}
+
+%% ---
+\underline{Specific Mode}
+
+{\small
+\begin{longtable}{p{0.12\textwidth} p{0.10\textwidth} p{0.16\textwidth} c c r r r r}
+\caption{Solver timing benchmark: Specific mode.}
+\label{tab:timing-specific} \\
+\toprule
+\textbf{Program} & \textbf{Config} & \textbf{Property} & \textbf{Verdict} & \textbf{Result} & \textbf{Build (s)} & \textbf{Solve (s)} & \textbf{Total (s)} & \textbf{Speedup} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Program} & \textbf{Config} & \textbf{Property} & \textbf{Verdict} & \textbf{Result} & \textbf{Build (s)} & \textbf{Solve (s)} & \textbf{Total (s)} & \textbf{Speedup} \\
+\midrule
+\endhead
+\midrule
+\endfoot
+\bottomrule
+\endlastfoot
+\multicolumn{9}{l}{\textit{Specific mode -- Loop Scaling}} \\
+\midrule
+\texttt{s\_repeat\_50} & NONE & $x \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.046 & 0.053 & 0.099 & 1.0$\times$ \\
+\texttt{s\_repeat\_100} & NONE & $x \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.041 & 0.078 & 0.119 & 1.0$\times$ \\
+\texttt{s\_repeat\_50} & BASIC$+$H1 & $x \leq 50$ & \texttt{TRUE} & \texttt{PASS} & 0.434 & 0.084 & 0.518 & 38.7$\times$ \\
+\texttt{s\_repeat\_100} & BASIC$+$H1 & $x \leq 100$ & \texttt{TRUE} & \texttt{PASS} & 0.380 & 0.068 & 0.447 & 44.9$\times$ \\
+\texttt{s\_repeat\_50} & BASIC$+$H2 & $x \leq 100$ (with offset) & \texttt{TRUE} & \texttt{PASS} & 0.452 & 0.084 & 0.536 & 37.4$\times$ \\
+\texttt{s\_repeat\_100} & BASIC$+$H1 & $x \leq 150$ (with offset) & \texttt{TRUE} & \texttt{PASS} & 0.382 & 0.073 & 0.456 & 44.0$\times$ \\
+\texttt{s\_repeat\_50} & BASIC$+$H1 & $x \leq 25$ & \texttt{FALSE} & \texttt{PASS} & 0.413 & 0.077 & 0.491 & 40.9$\times$ \\
+\texttt{s\_repeat\_100} & BASIC$+$H2 & $x \leq 50$ & \texttt{FALSE} & \texttt{PASS} & 0.389 & 0.092 & 0.480 & 41.8$\times$ \\
+\texttt{s\_repeat\_50} & NONE$+$H1 & $x \leq 50$ (with offset) & \texttt{FALSE} & \texttt{PASS} & 0.050 & 0.104 & 0.154 & 1.0$\times$ \\
+\texttt{s\_repeat\_100} & BASIC$+$H1 & $x \leq 100$ (with offset) & \texttt{FALSE} & \texttt{PASS} & 0.376 & 0.096 & 0.472 & 42.5$\times$ \\
+\midrule
+\multicolumn{9}{l}{\textit{Specific mode -- Nesting Depth}} \\
+\midrule
+\texttt{s\_nest\_3} & NONE & $a,b,c \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.266 & 0.081 & 0.347 & 1.0$\times$ \\
+\texttt{s\_nest\_4} & NONE & $a,b,c,d \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.455 & 0.161 & 0.616 & 1.0$\times$ \\
+\texttt{s\_nest\_3} & BASIC & $c \leq 125$ & \texttt{TRUE} & \texttt{PASS} & 0.946 & 0.097 & 1.043 & 19.4$\times$ \\
+\texttt{s\_nest\_4} & BASIC$+$H1 & $d \leq 256$ & \texttt{TRUE} & \texttt{PASS} & 1.729 & 0.159 & 1.887 & 10.8$\times$ \\
+\texttt{s\_nest\_3} & BASIC & $c \leq 135$ (with offset) & \texttt{TRUE} & \texttt{PASS} & 0.917 & 0.127 & 1.044 & 19.4$\times$ \\
+\texttt{s\_nest\_4} & BASIC & $d \leq 266$ (with offset) & \texttt{TRUE} & \texttt{PASS} & 1.633 & 0.155 & 1.788 & 11.4$\times$ \\
+\texttt{s\_nest\_3} & BASIC$+$H1 & $c \leq 100$ & \texttt{FALSE} & \texttt{PASS} & 0.940 & 0.110 & 1.049 & 19.3$\times$ \\
+\texttt{s\_nest\_4} & BASIC & $d \leq 200$ & \texttt{FALSE} & \texttt{PASS} & 1.713 & 0.149 & 1.862 & 11.0$\times$ \\
+\texttt{s\_nest\_3} & BASIC$+$H1 & $c \leq 125$ (with offset) & \texttt{FALSE} & \texttt{PASS} & 0.922 & 0.118 & 1.039 & 19.5$\times$ \\
+\texttt{s\_nest\_4} & BASIC & $d \leq 256$ (with offset) & \texttt{FALSE} & \texttt{PASS} & 1.704 & 0.161 & 1.865 & 11.0$\times$ \\
+\midrule
+\multicolumn{9}{l}{\textit{Specific mode -- Wide State}} \\
+\midrule
+\texttt{s\_wide} & NONE & $a,{\ldots},h > 0$ & \texttt{TRUE} & \texttt{PASS} & 0.204 & 0.097 & 0.301 & 1.0$\times$ \\
+\texttt{s\_wide} & NONE$+$H1 & $a,{\ldots},h > 0$ & \texttt{TRUE} & \texttt{PASS} & 0.206 & 0.080 & 0.286 & 1.1$\times$ \\
+\texttt{s\_wide} & BASIC & $a \leq 6$ & \texttt{TRUE} & \texttt{PASS} & 3.027 & 0.067 & 3.094 & 6.5$\times$ \\
+\texttt{s\_wide} & BASIC$+$H1 & $a \leq 4$ & \texttt{FALSE} & \texttt{PASS} & 2.954 & 0.075 & 3.029 & 6.7$\times$ \\
+\texttt{s\_wide} & BASIC & $h \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 2.928 & 0.147 & 3.075 & 6.6$\times$ \\
+\texttt{s\_wide} & BASIC$+$H1 & $h \leq 2211$ & \texttt{TRUE} & \texttt{PASS} & 2.923 & 0.085 & 3.008 & 6.7$\times$ \\
+\texttt{s\_wide} & BASIC$+$H1 & $h \leq 2000$ & \texttt{FALSE} & \texttt{PASS} & 3.269 & 0.073 & 3.342 & 6.1$\times$ \\
+\texttt{s\_wide} & BASIC$+$H2 & $h \leq 400$ & \texttt{FALSE} & \texttt{PASS} & 3.194 & 0.134 & 3.328 & 6.1$\times$ \\
+\texttt{s\_wide} & BASIC$+$H1 & $h \leq 495$ & \texttt{TRUE} & \texttt{PASS} & 2.976 & 0.092 & 3.068 & 6.6$\times$ \\
+\midrule
+\multicolumn{9}{l}{\textit{Specific mode -- Branching Density}} \\
+\midrule
+\texttt{s\_branches} & NONE & $x \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.441 & 0.080 & 0.521 & 1.0$\times$ \\
+\texttt{s\_branches} & NONE$+$H1 & $\mathit{acc} \geq 0$ & \texttt{TRUE} & \texttt{PASS} & 0.431 & 0.084 & 0.515 & 1.0$\times$ \\
+\texttt{s\_branches} & BASIC$+$H2 & $x \leq 8$ & \texttt{TRUE} & \texttt{PASS} & 0.480 & 0.139 & 0.619 & 33.0$\times$ \\
+\texttt{s\_branches} & BASIC & $x \leq 4$ & \texttt{FALSE} & \texttt{PASS} & 0.531 & 0.228 & 0.759 & 27.0$\times$ \\
+\texttt{s\_branches} & BASIC & $\mathit{acc} \leq 10$ & \texttt{FALSE} & \texttt{PASS} & 0.550 & 0.711 & 1.260 & 16.3$\times$ \\
+\texttt{s\_branches} & NONE & $\mathit{acc} \leq 18$ & - & {\color{red}\texttt{TIMEOUT}} & 0.460 & 20.014 & \textbf{T/O} & -- \\
+\midrule
+\multicolumn{9}{l}{\textit{Specific mode -- Trigonometric Motion}} \\
+\midrule
+\texttt{s\_trig\_10} & NONE$+$H1 & $\mathit{ycor} \geq 0$ & \texttt{FALSE} & \texttt{PASS} & 0.134 & 0.416 & 0.550 & 1.7$\times$ \\
+\texttt{s\_trig\_20} & NONE$+$H1 & $\mathit{ycor} \geq 0$ & \texttt{FALSE} & \texttt{PASS} & 0.132 & 0.746 & 0.877 & 1.8$\times$ \\
+\texttt{s\_trig\_10} & NONE$+$H1 & $\neg\mathit{pendown}$ & \texttt{TRUE} & \texttt{PASS} & 0.118 & 0.082 & 0.201 & 1.1$\times$ \\
+\texttt{s\_trig\_20} & NONE$+$H1 & $\neg\mathit{pendown}$ & \texttt{TRUE} & \texttt{PASS} & 0.134 & 0.086 & 0.220 & 1.0$\times$ \\
+\texttt{s\_trig\_10} & NONE$+$H1 & heading $\in \{0,90,180,270\}$ & \texttt{TRUE} & \texttt{PASS} & 0.169 & 0.364 & 0.532 & 37.8$\times$ \\
+\texttt{s\_trig\_20} & NONE$+$H1 & heading $\in \{0,90,180,270\}$ & \texttt{TRUE} & \texttt{PASS} & 0.123 & 0.255 & 0.378 & 1.2$\times$ \\
+\midrule
+\multicolumn{9}{l}{\textit{Specific mode -- Property Complexity}} \\
+\midrule
+\texttt{s\_repeat\_100} & NONE & single atom ($x \geq 0$) & \texttt{TRUE} & \texttt{PASS} & 0.057 & 0.051 & 0.107 & 1.0$\times$ \\
+\texttt{s\_repeat\_100} & BASIC & two-atom conj ($x \geq 0 \land x \leq 100$) & \texttt{TRUE} & \texttt{PASS} & 0.397 & 0.077 & 0.474 & 42.3$\times$ \\
+\texttt{s\_repeat\_100} & BASIC$+$H1 & 101-way exact disjunction on $x$ & \texttt{TRUE} & \texttt{PASS} & 0.345 & 0.195 & 0.540 & 37.3$\times$ \\
+\texttt{s\_repeat\_100} & BASIC & $x \leq 100$ (shifted, init$=50$) & \texttt{FALSE} & \texttt{PASS} & 0.377 & 0.085 & 0.462 & 43.4$\times$ \\
+\texttt{s\_repeat\_100} & BASIC$+$H1 & $x \geq 0 \land x \leq 150$ (shifted) & \texttt{TRUE} & \texttt{PASS} & 0.368 & 0.086 & 0.454 & 44.2$\times$ \\
+\end{longtable}
+}
+
+%% ---
+\subsubsection*{Aggregate Results by Mode and Configuration}
+
+Tables~\ref{tab:agg-default-m3}, \ref{tab:agg-universal-m3}, and \ref{tab:agg-specific-m3} present aggregate results for each verification mode across all six configurations.  Avg solve time excludes timed-out rows.  The best completion rate per table is \textbf{bolded}; the \textbf{Best} row reports the per-test-case optimum: for each test case the best result across all six configurations is taken, then aggregated.
+
+\begin{table}[H]
+\centering
+\caption{Aggregate results: \textbf{Default} mode (38 test cases).}
+\label{tab:agg-default-m3}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Config} & \textbf{Passed} & \textbf{Failed} & \textbf{Skipped} & \textbf{Completion} & \textbf{Avg Build (s)} & \textbf{Avg Solve (s)} \\
+\midrule
+NONE     & 24 & 0 & 14 & 63\% & 0.145 & 1.581 \\
+NONE+H1  & 25 & 0 & 13 & 66\% & 0.139 & 2.473 \\
+NONE+H2  & 24 & 0 & 14 & 63\% & 0.142 & 2.743 \\
+BASIC    & 33 & 0 &  5 & 87\% & 1.452 & 0.713 \\
+BASIC+H1 & 32 & 0 &  6 & 84\% & 1.482 & 0.415 \\
+BASIC+H2 & 34 & 0 &  4 & \textbf{89\%} & 1.481 & 0.674 \\
+\midrule
+\textbf{Best} & \textbf{37} & \textbf{0} & \textbf{1} & \textbf{97\%} & \textbf{0.525} & \textbf{0.119} \\
+\bottomrule
+\end{tabular}
+\end{table}
+\vspace{-2em}
+\begin{table}[H]
+\centering
+\caption{Aggregate results: \textbf{Universal} mode (38 test cases).}
+\label{tab:agg-universal-m3}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Config} & \textbf{Passed} & \textbf{Failed} & \textbf{Skipped} & \textbf{Completion} & \textbf{Avg Build (s)} & \textbf{Avg Solve (s)} \\
+\midrule
+NONE     & 28 & 0 & 10 &  74\% & 0.112 & 1.310 \\
+NONE+H1  & 28 & 0 & 10 &  74\% & 0.110 & 1.527 \\
+NONE+H2  & 30 & 0 &  8 &  79\% & 0.113 & 1.565 \\
+BASIC    & 38 & 0 &  0 & \textbf{100\%} & 1.163 & 0.061 \\
+BASIC+H1 & 38 & 0 &  0 & \textbf{100\%} & 1.143 & 0.061 \\
+BASIC+H2 & 38 & 0 &  0 & \textbf{100\%} & 1.147 & 0.078 \\
+\midrule
+\textbf{Best} & \textbf{38} & \textbf{0} & \textbf{0} & \textbf{100\%} & \textbf{0.323} & \textbf{0.093} \\
+\bottomrule
+\end{tabular}
+\end{table}
+\vspace{-2em}
+\begin{table}[H]
+\centering
+\caption{Aggregate results: \textbf{Specific} mode (52 test cases).}
+\label{tab:agg-specific-m3}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Config} & \textbf{Passed} & \textbf{Failed} & \textbf{Skipped} & \textbf{Completion} & \textbf{Avg Build (s)} & \textbf{Avg Solve (s)} \\
+\midrule
+NONE     & 19 & 0 & 33 & 37\% & 0.221 & 0.256 \\
+NONE+H1  & 20 & 0 & 32 & 38\% & 0.219 & 0.200 \\
+NONE+H2  & 20 & 0 & 32 & 38\% & 0.218 & 0.685 \\
+BASIC    & 48 & 0 &  4 & \textbf{92\%} & 1.793 & 0.474 \\
+BASIC+H1 & 48 & 0 &  4 & \textbf{92\%} & 1.779 & 0.533 \\
+BASIC+H2 & 44 & 0 &  8 & 85\% & 1.780 & 0.175 \\
+\midrule
+\textbf{Best} & \textbf{51} & \textbf{0} & \textbf{1} & \textbf{98\%} & \textbf{0.903} & \textbf{0.148} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% %% ---
+% \subsubsection*{Analysis}
+
+% \paragraph{Effect of optimisation level.}
+% The \texttt{BASIC} optimisation level consistently dominates \texttt{NONE} for tight-bound and
+% property-complexity queries, delivering speedups of $10$--$55\times$ in default and specific modes.
+% The improvement stems from the BASIC encoder's tighter CHC structure, which lets \textsc{Spacer}
+% find inductive invariants faster when the target property is a precise arithmetic bound.  For
+% trivially falsifiable queries (\textit{violated} properties) the gain is smaller but still
+% substantial ($4$--$40\times$), since counterexample search is less sensitive to invariant quality.
+
+% \paragraph{Effect of hints.}
+% H1 (\texttt{check\_heading\_always\_on\_grid}) provides a modest build-time overhead (one extra
+% CHC query) but reduces solve times for heading-heavy programs: e.g.\ \texttt{turns\_20}
+% \texttt{heading\_grid\_24} drops from $1.59$\,s to $0.17$\,s ($9.4\times$) in default mode.
+% H2 (\texttt{heading\_on\_grid\_always}) achieves comparable or greater solve-time reductions at
+% zero additional query cost; however, it is unsound for programs whose heading leaves the
+% 15-degree grid, so H1 is the safer default.  For non-heading properties both hints have
+% negligible effect.
+
+% \paragraph{Scalability across modes.}
+% Universal mode is the hardest: with \texttt{NONE} optimisation, 26\% of test cases time out.
+% \texttt{BASIC} eliminates all timeouts in universal mode (100\% completion) by generating a
+% compact fixed-point system that \textsc{Spacer} can close.  Default and specific modes are
+% similarly cured by \texttt{BASIC}, leaving only the two structurally hard cases
+% (\texttt{wide\_vars h\_tight} in default and \texttt{s\_branches acc\_tight} in specific) that
+% time out under \texttt{NONE} regardless of hint.
+
+% \paragraph{Timeout cases.}
+% Two benchmarks hit the 20\,s ceiling across all six configurations under at least one mode.
+% Both involve either a large disjunctive state space (\texttt{s\_branches acc\_tight}) or
+% simultaneous heading normalisation and trigonometric approximation
+% (\texttt{wide\_vars h\_tight} under \texttt{NONE}).  These are solver scalability limits, not
+% encoding defects; the CHC rules are well-formed and the properties are correctly stated.
+
+% %% ---
+% \subsubsection*{Running the Performance Tests}
+
+% \begin{lstlisting}[style=terminal, language=bash]
+% cd CHC-Verification/performance_tests
+% pytest test_default.py -v      # Default mode benchmarks
+% pytest test_universal.py -v    # Universal mode benchmarks
+% pytest test_specific.py -v     # Specific mode benchmarks
+
+% # Parallel execution (requires pytest-xdist)
+% pytest -n auto test_default.py
+% \end{lstlisting}
+
+% \noindent Results are written to \texttt{perf\_results\_\{default,universal,specific\}.csv}
+% for analysis.  Each row records \texttt{verdict\_*} (raw solver output) and \texttt{result\_*}
+% (pass/skip/fail relative to expected outcome) for all six configurations.

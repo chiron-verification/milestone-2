@@ -203,7 +203,6 @@ class TestDefaultHeadingGrid(ChironTestCase):
 
     MODE = "default"
 
-    @unittest.skip("Timed out")
     def test_heading_grid_turns_15_pass(self):
         """turns_15.tl keeps heading on 15-degree grid."""
         self.load("turns_15.tl", hints=["heading_on_grid_always"], optimization_level=OptimizationLevel.BASIC)
@@ -218,7 +217,6 @@ class TestDefaultHeadingGrid(ChironTestCase):
             "And(heading >= 0, heading < 360)",
         )
 
-    @unittest.skip("Timed out")
     def test_heading_grid_turns_15_narrow_fail(self):
         """turns_15.tl reaches more than one heading value, so a narrow set fails."""
         self.load("turns_15.tl", hints=["heading_on_grid_always"], optimization_level=OptimizationLevel.BASIC)
@@ -235,7 +233,6 @@ class TestDefaultTrig(ChironTestCase):
 
     MODE = "default"
 
-    @unittest.skip("Timed out")
     def test_trig_forward_square_box_pass(self):
         """forward_square.tl draws ~square at heading multiples of 90.
         Generous box [-100,100]x[-100,100] should hold."""
@@ -247,7 +244,6 @@ class TestDefaultTrig(ChironTestCase):
         self.load("forward_square.tl", hints=["heading_on_grid_always"])
         self.assert_property_fail("positive_y", "ycor >= 0")
 
-    @unittest.skip("Timed out")
     def test_trig_forward_square_heading_set_pass(self):
         """Only quarter-turn headings are reachable in forward_square.tl."""
         self.load("forward_square.tl", hints=["heading_on_grid_always"], optimization_level=OptimizationLevel.NONE)
@@ -271,7 +267,6 @@ class TestDefaultAdvanced(ChironTestCase):
 
     MODE = "default"
 
-    @unittest.skip("Timed out")
     def test_adv_flower_nested_fail(self):
         """flower_nested_pen.tl reaches count=6, so count<=4 is violated."""
         self.load("flower_nested_pen.tl", hints=["heading_on_grid_always"], 
@@ -286,7 +281,6 @@ class TestDefaultAdvanced(ChironTestCase):
             "And(count >= 0, heading >= 0, heading < 360)",
         )
 
-    @unittest.skip("Timed out")
     def test_adv_triangle_nested_fail(self):
         """triangle_nested_pen.tl reaches step=6, so step<=5 is violated."""
         self.load("triangle_nested_pen.tl", hints=["heading_on_grid_always"], optimization_level=OptimizationLevel.NONE)

@@ -1,0 +1,282 @@
+% % !TEX root = main.tex
+% \section*{Running the Verifier}
+
+% \subsection*{Setup}
+
+% Requires Python~3.11+, \texttt{z3-solver}, and \texttt{antlr4-python3-runtime}.
+% Both \texttt{CHC-Verification/} and \texttt{Chiron-Framework/ChironCore/} must be on \texttt{sys.path}; \texttt{variable\_name\_detection\_in\_IR.py} adds these automatically when run from the correct working directory.
+% The test suites use \texttt{pytest} and set up paths in their shared \texttt{helpers.py}.
+
+% \subsection*{Python API}
+
+% \noindent\textit{\small Entry point: \texttt{CHC-Verification/safety\_properties.py}}
+
+% \begin{lstlisting}[style=terminal]
+% from safety_properties import CHC_Verification
+% from variable_name_detection_in_IR import OptimizationLevel
+
+% result = CHC_Verification(
+%     file_name,                                        # path to .tl file
+%     mode,                                             # 'default' | 'specific' | 'universal'
+%     user_properties,                                  # list of objects with .name and .expr
+%     params=None,                                      # specific mode: "{':x': 10}"
+%     input_ranges=None,                                # universal mode: {'x': (0,10), 'y': None}
+%     property_scope="all",                             # 'all'|'terminating'|'at_pc'|'upto_pc'
+%     pc_target=None,                                   # required for at_pc / upto_pc
+%     hints=["check_heading_always_on_grid",
+%            "check_termination"],
+%     timeout_ms=60_000,
+%     optimization_level=OptimizationLevel.NONE,
+% )
+% \end{lstlisting}
+
+% \noindent\textbf{Key parameters.}
+% \texttt{mode} controls the initial state: \texttt{default} pins all state to concrete zero values; \texttt{specific} accepts user-supplied variable values via \texttt{params}; \texttt{universal} leaves \texttt{xcor}, \texttt{ycor}, and user variables unconstrained (optionally bounded by \texttt{input\_ranges}).
+% \texttt{property\_scope} restricts which reachable states are checked: \texttt{all} checks every reachable state; \texttt{terminating} restricts to the terminal PC; \texttt{at\_pc}/\texttt{upto\_pc} require an integer \texttt{pc\_target} and are incompatible with \texttt{OptimizationLevel.BASIC}.
+% Property objects expose a string \texttt{.name} and a string \texttt{.expr}; expressions use bare variable names (no \texttt{:} prefix) and may reference \texttt{xcor}, \texttt{ycor}, \texttt{heading}, \texttt{pendown}, \texttt{And}, \texttt{Or}, \texttt{Not}, and any user variable or loop counter.
+
+% \noindent\textbf{Return value (\texttt{ReturnValue}).}
+% \texttt{.status} gives the overall verdict (\texttt{PASSED}/\texttt{FAILED}/\texttt{UNKNOWN});
+% \texttt{.heading\_grid\_safe} gives the heading-grid check outcome;
+% \texttt{.passing\_properties}, \texttt{.failing\_properties}, \texttt{.unknown\_properties} partition the property list with their invariants or counterexamples;
+% \texttt{.build\_time} and \texttt{.solve\_times} report wall-clock timings;
+% \texttt{.error} (a \texttt{ReturnError} enum) distinguishes input errors from inconclusive results.
+
+% \noindent\textbf{Semantic wrapper.}
+% \texttt{CHC\_Verification\_semantic} (in \texttt{semantic\_properties.py}) accepts the same arguments but transpiles helper-style property strings before calling the core verifier.
+% Helpers include \texttt{is\_nonnegative(v)}, \texttt{position\_in\_box(x0,x1,y0,y1)}, \texttt{pen\_is\_up()}, \texttt{heading\_on\_15\_grid()}, \texttt{var\_bounded(v,lo,hi)}, \texttt{implies(p,q)}, \texttt{relation\_guarded(cond,p,q)}, and others; raw Z3-style expressions pass through unchanged.
+
+% \subsection*{CLI Interface}
+
+% \noindent\textit{\small Entry point: \texttt{Chiron-Framework/ChironCore/chiron.py}}
+
+% \begin{lstlisting}[style=terminal]
+% python chiron.py -chc [flags] <program.tl>
+% \end{lstlisting}
+
+% \begin{longtable}{p{2.8cm} p{2.6cm} p{7.4cm}}
+% \toprule
+% \textbf{Flag} & \textbf{Default} & \textbf{Description} \\
+% \midrule
+% \endhead
+% \texttt{-chc} & --- & Enable CHC verification. \\
+% \texttt{-chc\_mode} & \texttt{default} & \texttt{default} / \texttt{specific} / \texttt{universal}. \\
+% \texttt{-chc\_props} & \textit{(none)} & Semicolon-separated \texttt{name:expr} pairs. Expressions use bare variable names (no \texttt{:}). Example: \texttt{"x\_pos:x >= 0;y\_bound:y <= 100"}. \\
+% \texttt{-chc\_scope} & \texttt{all} & \texttt{all} / \texttt{terminating} / \texttt{at\_pc} / \texttt{upto\_pc}. \\
+% \texttt{-chc\_pc} & \textit{(none)} & Target PC integer for \texttt{at\_pc} / \texttt{upto\_pc}. \\
+% \texttt{-chc\_timeout} & \texttt{60000} & Per-query solver timeout (ms). \\
+% \texttt{-chc\_hints} & \texttt{check\_heading\_always\_on\_grid,} \texttt{check\_termination} & Comma-separated hints. Valid: \texttt{check\_heading\_always\_on\_grid}, \texttt{heading\_on\_grid\_always}, \texttt{check\_termination}, \texttt{always\_terminates}. \\
+% \texttt{-chc\_opt} & \texttt{NONE} & \texttt{NONE} or \texttt{BASIC}. \texttt{BASIC} incompatible with \texttt{at\_pc}/\texttt{upto\_pc}. \\
+% \texttt{-d} / \texttt{--params} & \textit{(none)} & Initial variable values for \texttt{specific} mode: \texttt{'\{":x": 10\}'}. \\
+% \bottomrule
+% \end{longtable}
+
+% \noindent The CLI prints a result block with \texttt{Status}, \texttt{Heading-grid}, \texttt{Build time}, and lists of passing and failing properties.
+
+% !TEX root = main.tex
+\section*{Running the Verifier}
+
+\subsection*{Prerequisites and Setup}
+
+The verifier requires Python~3.11 or later, Z3~4.13 or later (installed as the \texttt{z3-solver} PyPI package), and ANTLR~4 (available as \texttt{antlr4-python3-runtime}).
+
+\begin{lstlisting}[style=terminal]
+pip install z3-solver antlr4-python3-runtime
+\end{lstlisting}
+
+\subsection*{Python API}
+
+\subsubsection*{Entry Point: \texttt{CHC\_Verification}}
+\vspace{-2mm}
+\noindent\textit{\small File: \texttt{CHC-Verification/safety\_properties.py}}
+
+\begin{lstlisting}[style=terminal]
+from safety_properties import CHC_Verification
+from variable_name_detection_in_IR import OptimizationLevel
+
+result = CHC_Verification(
+    file_name,
+    mode,
+    user_properties,
+    params            = None,
+    input_ranges      = None,
+    property_scope    = "all",
+    pc_target         = None,
+    hints             = ["check_heading_always_on_grid",
+                         "check_termination"],
+    timeout_ms        = 60_000,
+    optimization_level= OptimizationLevel.NONE,
+)
+\end{lstlisting}
+
+\noindent\textbf{Parameters.}
+
+\begin{longtable}{p{3.2cm} p{2.0cm} p{10.0cm}}
+\toprule
+\textbf{Parameter} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{file\_name} & \texttt{str} & Path to the Chiron \texttt{.tl} source file to verify. \\
+\addlinespace
+\texttt{mode} & \texttt{str} & Verification mode. One of \texttt{"default"}, \texttt{"specific"}, or \texttt{"universal"}. \\
+\addlinespace
+\texttt{user\_properties} & \texttt{list} & List of property objects. Each object must expose a \texttt{.name} (string label) and \texttt{.expr} (Z3-style Python expression string). Variable names match program source without the leading \texttt{:} (e.g.\ \texttt{"x >= 0"} for Chiron variable \texttt{:x}). \\
+\addlinespace
+\texttt{params} & \texttt{str | None} & Required only in \texttt{"specific"} mode. A string representation of a Python dictionary mapping colon-prefixed variable names to numeric values. Example: \texttt{"\{':x': 10, ':y': 5\}"}. Omitted variables default to zero. \\
+\addlinespace
+\texttt{input\_ranges} & \texttt{dict | None} & Used only in \texttt{"universal"} mode to restrict user variables. Keys are bare variable names (no \texttt{:}). Values may be an \texttt{int} (fixed constant), a \texttt{(lo, hi)} integer interval (inclusive), or \texttt{None} (unconstrained). Unknown variable names are rejected. \\
+\addlinespace
+\texttt{property\_scope} & \texttt{str} & One of \texttt{"all"} (default), \texttt{"terminating"}, \texttt{"at\_pc"}, or \texttt{"upto\_pc"}. Controls which reachable states the properties are checked against. \\
+\addlinespace
+\texttt{pc\_target} & \texttt{int | None} & Required for \texttt{"at\_pc"} and \texttt{"upto\_pc"} scopes; must be an integer between 0 and the terminal PC (inclusive). Forbidden for \texttt{"all"} and \texttt{"terminating"} scopes. \\
+\addlinespace
+\texttt{hints} & \texttt{list[str]} & Solver behaviour hints. Supplying both members of a mutually exclusive pair (prove vs.\ assume) is rejected. \\
+\addlinespace
+\texttt{timeout\_ms} & \texttt{int} & Per-query solver timeout in milliseconds. Default: \texttt{60\_000} (60 seconds). When a query times out the corresponding property is recorded as \texttt{UNKNOWN}. \\
+\addlinespace
+\texttt{optimization\_level} & \texttt{Optimization Level} & \texttt{OptimizationLevel.NONE} (default) uses the standard per-instruction encoding. \texttt{OptimizationLevel.BASIC} enables the turn-safety and loop-summarization pipeline. Incompatible with \texttt{property\_scope="at\_pc"} or \texttt{"upto\_pc"}. \\
+\bottomrule
+\end{longtable}
+
+\noindent\textbf{Property objects.}
+
+Any object with a string \texttt{.name} and a string \texttt{.expr} field is accepted; no specific class is required.
+The expression in \texttt{.expr} is evaluated in a context that provides \texttt{xcor}, \texttt{ycor}, \texttt{heading}, \texttt{pendown}, \texttt{And}, \texttt{Or}, \texttt{Not}, and every user variable and loop counter by their bare name (without the \texttt{:} prefix used in Chiron source).
+
+\begin{lstlisting}[style=terminal]
+class UserProperty:
+    def __init__(self, name: str, expr: str):
+        self.name = name
+        self.expr = expr
+\end{lstlisting}
+
+\noindent\textbf{\texttt{ReturnValue}.}
+
+\begin{longtable}{p{3.7cm} p{2.7cm} p{9.0cm}}
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{.status} & \texttt{str} & Overall verdict: \texttt{"PASSED"}, \texttt{"FAILED"}, or \texttt{"UNKNOWN"}. \\
+\texttt{.heading\_grid\_safe} & \texttt{str} & Heading grid check outcome: \texttt{"PASSED"}, \texttt{"FAILED"}, or \texttt{"UNKNOWN"}. \\
+\texttt{.error} & \texttt{ReturnError} & \texttt{ReturnError.SUCCESS}, \texttt{.ERROR} (invalid input), or \texttt{.UNKNOWN}. \\
+\texttt{.build\_time} & \texttt{float} & Wall-clock time (seconds) to parse and build the CHC encoding. \\
+\texttt{.solve\_times} & \texttt{list[float]} & Per-property solve time in seconds, in property list order. \\
+\texttt{.passing\_properties} & \texttt{list} & \texttt{[name, invariant]} pairs for each \texttt{PASSED} property. \\
+\texttt{.failing\_properties} & \texttt{list} & \texttt{[name, counterexample]} pairs for each \texttt{FAILED} property. \\
+\texttt{.unknown\_properties} & \texttt{list[str]} & Names of all \texttt{UNKNOWN} properties. \\
+\texttt{.expr} & \texttt{str} & Human-readable summary string. \\
+\texttt{.advice} & \texttt{str} & Human-readable suggestion for next steps. \\
+\bottomrule
+\end{longtable}
+
+\subsubsection*{Semantic Helper API: \texttt{CHC\_Verification\_semantic}}
+
+\noindent\textit{\small File: \texttt{CHC-Verification/semantic\_properties.py}}
+
+\texttt{CHC\_Verification\_semantic} wraps the core verifier with a transpilation step
+that converts readable helper-style property strings into raw Z3-compatible expressions
+before they reach \texttt{eval()}.
+
+\begin{lstlisting}[style=terminal]
+from semantic_properties import CHC_Verification_semantic
+
+result = CHC_Verification_semantic(
+    file_name=...,
+    mode=...,
+    user_properties=...,  # helper-style expressions accepted
+    # all other kwargs forwarded to CHC_Verification
+)
+\end{lstlisting}
+
+\noindent Property strings may use any of the helper functions listed below in
+Table~\ref{tab:helpers}; raw Z3-style expressions (\texttt{x >= 0}, \texttt{And(...)})
+are also accepted unchanged.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{p{5.2cm} p{2.0cm} p{7.5cm}}
+\toprule
+\textbf{Helper} & \textbf{Args} & \textbf{Expansion} \\
+\midrule
+\texttt{is\_nonnegative(v)} & 1 & \texttt{v >= 0} \\
+\texttt{is\_positive(v)} & 1 & \texttt{v > 0} \\
+\texttt{is\_negative(v)} & 1 & \texttt{v < 0} \\
+\texttt{is\_between(v, lo, hi)} & 3 & \texttt{And(v >= lo, v <= hi)} \\
+\texttt{is\_strictly\_between(v, lo, hi)} & 3 & \texttt{And(v > lo, v < hi)} \\
+\texttt{is\_one\_of(v, a, b, ...)} & $\ge$2 & \texttt{Or(v==a, v==b, ...)} \\
+\texttt{is\_multiple\_of(v, n)} & 2 & \texttt{v \% n == 0} \\
+\texttt{sum\_is(a, b, c)} & 3 & \texttt{a + b == c} \\
+\texttt{pen\_is\_up()} & 0 & \texttt{Not(pendown)} \\
+\texttt{pen\_is\_down()} & 0 & \texttt{pendown} \\
+\texttt{x\_in\_range(lo, hi)} & 2 & \texttt{And(xcor >= lo, xcor <= hi)} \\
+\texttt{y\_in\_range(lo, hi)} & 2 & \texttt{And(ycor >= lo, ycor <= hi)} \\
+\texttt{position\_in\_box(x0,x1,y0,y1)} & 4 & \texttt{And(xcor>=x0, xcor<=x1, ycor>=y0, ycor<=y1)} \\
+\texttt{at\_position(x, y)} & 2 & \texttt{And(xcor==x, ycor==y)} \\
+\texttt{on\_diagonal()} & 0 & \texttt{xcor == ycor} \\
+\texttt{heading\_is(h)} & 1 & \texttt{heading == h} \\
+\texttt{heading\_cardinal()} & 0 & \texttt{Or(heading==0, 90, 180, 270)} \\
+\texttt{heading\_on\_15\_grid()} & 0 & \texttt{heading \% 15 == 0} \\
+\texttt{var\_bounded(v, lo, hi)} & 3 & \texttt{And(v >= lo, v <= hi)} \\
+\texttt{vars\_all\_nonnegative(a,b,...)} & $\ge$1 & \texttt{And(a>=0, b>=0, ...)} \\
+\texttt{implies(p, q)} & 2 & \texttt{Or(Not(p), q)} \\
+\texttt{relation\_guarded(cond, p, q)} & 3 & \texttt{Or(And(cond,p), And(Not(cond),q))} \\
+\texttt{all\_of(p, q, ...)} & $\ge$1 & \texttt{And(p, q, ...)} \\
+\texttt{any\_of(p, q, ...)} & $\ge$1 & \texttt{Or(p, q, ...)} \\
+\texttt{not\_prop(p)} & 1 & \texttt{Not(p)} \\
+\bottomrule
+\end{tabular}
+\caption{Selected semantic helper functions available in \texttt{CHC\_Verification\_semantic}.}
+\label{tab:helpers}
+\end{table}
+
+\subsection*{CLI Interface}
+
+The CHC verifier is integrated into \texttt{chiron.py} and is invoked by adding \texttt{-chc} to any standard \texttt{chiron.py} command line.
+
+\begin{lstlisting}[style=terminal]
+cd Chiron-Framework/ChironCore
+python chiron.py -chc [options] <program.tl>
+\end{lstlisting}
+
+\noindent\textbf{CHC-specific flags.}
+
+\begin{longtable}{p{3.0cm} p{2.8cm} p{9.3cm}}
+\toprule
+\textbf{Flag} & \textbf{Default} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{-chc} & --- & Enable CHC verification. Must be present to activate any of the flags below. \\
+\addlinespace
+\texttt{-chc\_mode} & \texttt{default} & Verification mode. Choices: \texttt{default}, \texttt{specific}, \texttt{universal}. \\
+\addlinespace
+\texttt{-chc\_props} & \textit{(none)} & Properties to verify, as a semicolon-separated list of \texttt{name:expr} pairs. \texttt{name} is a label; \texttt{expr} is a Z3-style Python expression over program variables (without the \texttt{:} prefix). Example: \mbox{\texttt{"x\_pos:x >= 0;y\_bound:y <= 100"}}. No properties runs the heading-grid check only. \\
+\addlinespace
+\texttt{-chc\_scope} & \texttt{all} & Property scope. Choices: \texttt{all}, \texttt{terminating}, \texttt{at\_pc}, \texttt{upto\_pc}. \\
+\addlinespace
+\texttt{-chc\_pc} & \textit{(none)} & Target PC (integer) for \texttt{at\_pc} or \texttt{upto\_pc} scope. \\
+\addlinespace
+\texttt{-chc\_timeout} & \texttt{60000} & Solver timeout per query in milliseconds. \\
+\addlinespace
+\texttt{-chc\_hints} & \textit{default hint} & Comma-separated solver hints. \\
+\addlinespace
+\texttt{-chc\_opt} & \texttt{NONE} & Encoding optimization level. Choices: \texttt{NONE}, \texttt{BASIC}. \texttt{BASIC} incompatible with \texttt{at\_pc}/\texttt{upto\_pc} scope. \\
+\addlinespace
+\texttt{-d} / \texttt{--params} & \textit{(none)} & Initial variable values for \texttt{specific} mode, as a Python dict string. Example: \texttt{-d '\{":x": 10, ":y": 5\}'}. \\
+\bottomrule
+\end{longtable}
+
+\subsubsection*{CLI Output}
+
+After the solver completes, \texttt{chiron.py} prints a structured result block:
+
+\begin{lstlisting}[style=terminal]
+=== CHC Verification Result ===
+Status          : PASSED
+Heading-grid    : PASSED
+Build time      : 0.031s
+Passing         : ['x_nonneg']
+Message         : All properties satisfied.
+Advice          : The program is safe to run with respect to the specified properties.
+\end{lstlisting}

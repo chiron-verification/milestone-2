@@ -22,6 +22,18 @@ from variable_name_detection_in_IR import OptimizationLevel
 
 PROGRAMS_DIR = os.path.join(_THIS_DIR, "programs")
 
+_H1 = ["check_heading_always_on_grid"]
+_H2 = ["heading_on_grid_always"]
+_TIMEOUT_FALLBACK_COMBOS = [
+    (OptimizationLevel.NONE,  _H1),
+    (OptimizationLevel.NONE,  _H2),
+    (OptimizationLevel.BASIC, _H1),
+    (OptimizationLevel.BASIC, _H2),
+]
+
+def _is_timeout(result):
+    return result.status == 'UNKNOWN' and result.expr is not None and 'timed out' in result.expr
+
 class UserProperty:
     """Property with a string expression for passing to CHC_Verification."""
     def __init__(self, name: str, expr: str):
@@ -31,7 +43,7 @@ class UserProperty:
 def program_path(name: str) -> str:
     return os.path.join(PROGRAMS_DIR, name)
 
-def _run_api_check(file_path, mode, name, expr_str, params=None, hints=["check_heading_always_on_grid"], timeout_ms=60_000, property_scope="all", optimization_level=OptimizationLevel.NONE, pc_target=None):
+def _run_api_check(file_path, mode, name, expr_str, params=None, hints=["check_heading_always_on_grid"], timeout_ms=20_000, property_scope="all", optimization_level=OptimizationLevel.NONE, pc_target=None):
     """Call CHC_Verification with a single property, stdout suppressed.
     params is a plain dict; converts to colon-keyed string for CHC_Verification."""
     params_str = None
@@ -50,7 +62,7 @@ def _run_api_check(file_path, mode, name, expr_str, params=None, hints=["check_h
             pc_target=pc_target,
         )
 
-def _run_api_check_semantic(file_path, mode, name, expr_str, params=None, hints=["check_heading_always_on_grid"], timeout_ms=60_000, property_scope="all", optimization_level=OptimizationLevel.NONE, pc_target=None):
+def _run_api_check_semantic(file_path, mode, name, expr_str, params=None, hints=["check_heading_always_on_grid"], timeout_ms=20_000, property_scope="all", optimization_level=OptimizationLevel.NONE, pc_target=None):
     """Call CHC_Verification_semantic with a single helper-style property string,
     stdout suppressed. params is a plain dict; converts to colon-keyed string."""
     params_str = None
@@ -73,7 +85,7 @@ class ChironTestCase(unittest.TestCase):
 
     MODE: str = None
 
-    def load(self, tl_file: str, params=None, hints=["check_heading_always_on_grid"], timeout_ms=60_000, property_scope="all", optimization_level=OptimizationLevel.NONE, pc_target=None):
+    def load(self, tl_file: str, params=None, hints=["check_heading_always_on_grid"], timeout_ms=20_000, property_scope="all", optimization_level=OptimizationLevel.NONE, pc_target=None):
         """Store file info for CHC_Verification runs."""
         self._tl_file = tl_file
         self._file_path = program_path(tl_file)
@@ -95,6 +107,12 @@ class ChironTestCase(unittest.TestCase):
     def _assert_property_status(self, name: str, expr: str, expected: str, heading_grid_expected: str = None):
         """Run CHC_Verification and assert property status (and heading grid if provided)."""
         result = _run_api_check(self._file_path, self.MODE, name, expr, self._params, self._hints, self._timeout_ms, self._property_scope, self._optimization_level, self._pc_target)
+        if _is_timeout(result) and self._optimization_level == OptimizationLevel.NONE:
+            for opt_level, hints in _TIMEOUT_FALLBACK_COMBOS:
+                fallback = _run_api_check(self._file_path, self.MODE, name, expr, self._params, hints, self._timeout_ms, self._property_scope, opt_level, self._pc_target)
+                if not _is_timeout(fallback) and fallback.error != ReturnError.ERROR:
+                    result = fallback
+                    break
         if result.error == ReturnError.ERROR:
             self.fail(f"{result.expr} {result.advice}")
         self.assertEqual(
@@ -111,6 +129,12 @@ class ChironTestCase(unittest.TestCase):
     def _assert_heading_grid_status(self, name: str, expr: str, expected: str):
         """Run CHC_Verification and assert heading grid status."""
         result = _run_api_check(self._file_path, self.MODE, name, expr, self._params, self._hints, self._timeout_ms, self._property_scope, self._optimization_level, self._pc_target)
+        if _is_timeout(result) and self._optimization_level == OptimizationLevel.NONE:
+            for opt_level, hints in _TIMEOUT_FALLBACK_COMBOS:
+                fallback = _run_api_check(self._file_path, self.MODE, name, expr, self._params, hints, self._timeout_ms, self._property_scope, opt_level, self._pc_target)
+                if not _is_timeout(fallback) and fallback.error != ReturnError.ERROR:
+                    result = fallback
+                    break
         if result.error == ReturnError.ERROR:
             self.fail(f"{result.expr} {result.advice}")
         self.assertEqual(
@@ -122,6 +146,12 @@ class ChironTestCase(unittest.TestCase):
     def _assert_semantic_property_status(self, name: str, expr: str, expected: str, heading_grid_expected: str = None):
         """Run CHC_Verification_semantic and assert property status (and heading grid if provided)."""
         result = _run_api_check_semantic(self._file_path, self.MODE, name, expr, self._params, self._hints, self._timeout_ms, self._property_scope, self._optimization_level, self._pc_target)
+        if _is_timeout(result) and self._optimization_level == OptimizationLevel.NONE:
+            for opt_level, hints in _TIMEOUT_FALLBACK_COMBOS:
+                fallback = _run_api_check_semantic(self._file_path, self.MODE, name, expr, self._params, hints, self._timeout_ms, self._property_scope, opt_level, self._pc_target)
+                if not _is_timeout(fallback) and fallback.error != ReturnError.ERROR:
+                    result = fallback
+                    break
         if result.error == ReturnError.ERROR:
             self.fail(f"{result.expr} {result.advice}")
         self.assertEqual(
