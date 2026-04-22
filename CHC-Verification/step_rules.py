@@ -768,7 +768,7 @@ def add_step_rules_to_fixed_point(ir, mode, param=None, input_ranges=None, optim
 
         # Build summaries from innermost outward.  A loop is summarizable if
         # its body (after treating already-summarized inner loops as atomic
-        # blocks) contains no ConditionCommands or non-unit jumps.
+        # steps) contains no assert and supports branch merging
         loop_summaries = {}       # init_idx -> (exit_idx, state_no_pc_tuple, bad_rules_list)
         summarizable_by_init = {} # init_idx -> loop_desc
 
