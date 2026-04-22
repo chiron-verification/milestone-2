@@ -160,7 +160,7 @@ This predicate is also the conclusion of the \texttt{BadHeading} violation rules
 
 \textbf{7. \texttt{CHC-Verification/optimization\_helpers.py}}
 Implements static turn-safety reasoning, repeat-loop detection, summarizability checks, and exact 15-degree trig tables used by optimized rule generation.
-The precomputed \texttt{\_MULT15\_VALUES} dictionary maps each of the 24 valid headings to exact integer \(\Delta x\) and \(\Delta y\) displacements scaled to avoid fractions, so movement rules submitted to SPACER contain only integer arithmetic and require no real-valued reasoning.
+The precomputed \texttt{\_MULT15\_VALUES} dictionary maps each of the 24 valid headings to decimals \(\Delta x\) and \(\Delta y\) displacements scaled, so movement rules submitted to SPACER contain only integer arithmetic other than $xcor$ and $ycor$ update.
 The \texttt{is\_summarizable\_loop\_nested()} predicate enforces structural constraints - a positive constant loop bound within \texttt{MAX\_SUMMARIZE\_ITERATIONS}, no \texttt{AssertCommand} nodes, only unit jumps except for supported if/else shapes, and no use of the loop counter inside the body (already summarized inner loops are treated as atomic) - so that the summarization in \texttt{step\_rules.py} is provably sound: every concrete execution through the loop is covered by the emitted summary transition.
 
 \textbf{8. \texttt{CHC-Verification/semantic\_properties.py}}
@@ -184,9 +184,9 @@ The companion entry point \texttt{CHC\_Verification\_semantic()} wraps \texttt{C
         \item \noindent\textit{\small \texttt{Tradeoff:}} Properties over a strict variable subset still incur full-arity SPACER reasoning; adding any new state component requires regenerating the entire relation signature and all registered rules.
     \end{itemize}
     \item \textbf{Strict heading lattice with explicit \texttt{BadHeading} relation.}
-    Heading is restricted to $\{0^\circ, 15^\circ, \ldots, 345^\circ\}$ and movement arithmetic is handled via a precomputed 24-entry integer lookup table rather than transcendental \texttt{sin}/\texttt{cos} constraints.
+    Heading is restricted to $\{0^\circ, 15^\circ, \ldots, 345^\circ\}$ and movement arithmetic is handled via a precomputed 24-entry fractional lookup table rather than transcendental \texttt{sin}/\texttt{cos} constraints.
     \begin{itemize}[leftmargin=1.5em, noitemsep, topsep=2pt]
-        \item \noindent\textit{\small \texttt{Benefit:}} Keeps all arithmetic in the linear integer arithmetic (LIA) fragment, which SPACER handles reliably; heading violations are a first-class proof obligation rather than a silent assumption.
+        \item \noindent\textit{\small \texttt{Benefit:}} Keeps all arithmetic linear, with only \texttt{xcor} and \texttt{ycor} as decimals, others as integer, which SPACER handles reliably; heading violations are a first-class proof obligation rather than a silent assumption.
         \item \noindent\textit{\small \texttt{Tradeoff:}} The disjunctive heading guard expands CHC clause size proportionally to the number of valid headings; failing to prove grid preservation yields a conservative \texttt{UNKNOWN} on all downstream property checks.
     \end{itemize}
 \end{enumerate}

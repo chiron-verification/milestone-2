@@ -94,6 +94,18 @@ def check_property(fp, Inv, state, symbol_table, counter_table, property, mode, 
 def CHC_Verification(file_name, mode, user_properties, params=None, input_ranges=None, property_scope="all", pc_target=None, hints=["check_heading_always_on_grid", "check_termination"], timeout_ms=60_000, optimization_level=OptimizationLevel.NONE):
 
     return_safety = ReturnValue()
+    
+    # Validate contradictory hint combinations are absent
+    if Hints.CHECK_HEADING_ALWAYS_ON_GRID in hints and Hints.HEADING_ON_GRID_ALWAYS in hints:
+        return_safety.expr = "Contradictory hints: cannot both check and assume heading is always on grid."
+        return_safety.advice = "Please choose either 'check_heading_always_on_grid' or 'heading_on_grid_always', not both."
+        return_safety.error = ReturnError.ERROR
+        return return_safety
+    if Hints.CHECK_TERMINATION in hints and Hints.ALWAYS_TERMINATES in hints:
+        return_safety.expr = "Contradictory hints: cannot both check and assume program always terminates."
+        return_safety.advice = "Please choose either 'check_termination' or 'always_terminates', not both."
+        return_safety.error = ReturnError.ERROR
+        return return_safety
 
     if mode not in ['universal', 'specific', 'default']:
         return_safety.expr = "Invalid mode."
