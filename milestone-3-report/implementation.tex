@@ -32,6 +32,98 @@ The API also enforces a few scope-specific restrictions: \texttt{pc\_target} is 
 
 \subsection*{End-to-End Pipeline View}
 
+Figure~\ref{fig:end_to_end_pipeline} shows the full safety-verification flow from the Chiron CLI and Python entrypoints into the core CHC engine, including fixedpoint construction, optimization-aware rule emission, semantic gates, and structured result reporting.
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[>=stealth, line width=0.9pt, font=\footnotesize, scale=0.74, transform shape]
+
+\node[draw, rounded corners=2mm, align=left, text width=5.5cm, minimum height=1.95cm, fill=blue!10] (p1) at (0,0)
+{\textbf{1. Entry Point}\\
+CLI parses \texttt{-chc} flags and calls
+\texttt{CHC\_Verification($\ldots$)};\\
+Python callers may invoke the API directly
+\texttt{ChironCore/chiron.py}, \texttt{safety\_properties.py}};
+
+\node[draw, rounded corners=2mm, align=left, text width=4.8cm, minimum height=2.15cm, fill=blue!10] (p2) at (9.0,0)
+{\textbf{2. API Validation Gate}\\
+Validate mode/scope/\texttt{pc\_target},\\
+hints, params, and opt-scope compatibility\\
+\texttt{safety\_properties.py::\\CHC\_Verification}};
+
+\node[draw, rounded corners=2mm, align=left, text width=5.1cm, minimum height=2.05cm, fill=blue!10] (p3) at (9.0,-3.2)
+{\textbf{3. Parse Program to IR}\\
+\texttt{getParseTree} + \texttt{astGenPass}\\
+produce linear IR and \texttt{terminal\_pc}\\
+\texttt{irhandler.py}, \texttt{builder.py}};
+
+\node[draw, rounded corners=2mm, align=left, text width=5.4cm, minimum height=2.30cm, fill=blue!10] (p4) at (0,-3.2)
+{\textbf{4. Symbol and Relation Setup}\\
+Extract user vars + repeat counters;\\
+declare \texttt{Inv}/\texttt{BadHeading} and\\
+state/\texttt{next\_state} tuples\\
+\texttt{variable\_name\_detection\_in\_IR.py},\\
+\texttt{z3\_fixed\_point.py}};
+
+\node[draw, rounded corners=2mm, align=left, text width=5.5cm, minimum height=2.30cm, fill=blue!10] (p5) at (0,-6.6)
+{\textbf{5. Fixedpoint Initialization}\\
+Create \texttt{Fixedpoint(engine='spacer')},\\
+register relations, seed mode-specific\\
+initial facts/rules \\(default/specific/universal)\\
+\texttt{init\_fixed\_point.py}};
+
+\node[draw, rounded corners=2mm, align=left, text width=5.4cm, minimum height=2.30cm, fill=blue!10] (p6) at (9.0,-6.6)
+{\textbf{6. CHC Rule Emission}\\
+\texttt{add\_step\_rules\_to\_fixed\_point}\\
+\texttt{NONE}: per-instruction rules\\
+\texttt{BASIC}: \texttt{turn\_safe} + loop summaries\\
+\texttt{step\_rules.py}, \texttt{optimization\_helpers.py}};
+
+\node[draw, rounded corners=2mm, align=left, text width=5.5cm, minimum height=2.15cm, fill=blue!10] (p7) at (9.0,-10.0)
+{\textbf{7. Heading-Grid Gate}\\
+Either assume grid via hint, or query\\
+\texttt{Exists(BadHeading(state))}\\
+on violation/unknown, return early\\
+\texttt{safety\_properties.py}};
+
+\node[draw, rounded corners=2mm, align=center, text width=3.6cm, minimum height=1.6cm, fill=red!18] (p7exit) at (17.0,-10.0)
+{\textbf{Early Exit}\\
+heading unsafe or unknown};
+
+\node[draw, rounded corners=2mm, align=left, text width=5.2cm, minimum height=2.15cm, fill=blue!10] (p8) at (0,-10.0)
+{\textbf{8. Scope Guarding}
+Apply \texttt{all}/\texttt{terminating}/\texttt{at\_pc}/\texttt{upto\_pc}
+build assumptions with \texttt{guard\_check}
+may return early on unreachable/unknown
+\texttt{safety\_properties.py}};
+
+\node[draw, rounded corners=2mm, align=left, text width=5.4cm, minimum height=2.30cm, fill=blue!10] (p9) at (0,-13.3)
+{\textbf{9. Property Query Loop}\\
+Parse/eval each property in restricted context;
+query\\ \(\exists s.\ \texttt{Inv}(s)\land A(s)\land \neg P(s)\);
+record PASS/FAIL/UNKNOWN and solve times
+\texttt{check\_property}, \texttt{safe\_fp\_query}};
+
+\node[draw, rounded corners=2mm, align=left, text width=5.2cm, minimum height=2.00cm, fill=green!10] (p10) at (9.0,-13.3)
+{\textbf{10. Structured Return}\\
+Populate \texttt{ReturnValue}: status,
+\texttt{heading\_grid\_safe}, build time, solve times,
+passing/failing/unknown property sets};
+
+\draw[->] (p1.east) -- node[above, align=center, fill=white, inner sep=1pt] {normalized call\\arguments} (p2.west);
+\draw[->] (p2.south) -- node[right, align=center, fill=white, inner sep=1pt] {validated request} (p3.north);
+\draw[->] (p3.west) -- node[above, align=center, fill=white, inner sep=1pt] {IR + \texttt{terminal\_pc}} (p4.east);
+\draw[->] (p4.south) -- node[left, align=center, fill=white, inner sep=1pt] {relation signature\\+ symbol tables} (p5.north);
+\draw[->] (p5.east) -- node[above, align=center, fill=white, inner sep=1pt] {seeded \texttt{fp}\\+ mode constraints} (p6.west);
+\draw[->] (p6.south) -- node[right, align=center, fill=white, inner sep=1pt] {rule-complete model\\+\ \texttt{turn\_safe\_map}} (p7.north);
+\draw[->] (p7.east) -- node[above, align=center, fill=white, inner sep=1pt] {violation/unknown} (p7exit.west);
+\draw[->] (p7.west) -- node[above, align=center, fill=white, inner sep=1pt] {heading status\\+ assumptions} (p8.east);
+\draw[->] (p8.south) -- node[left, align=center, fill=white, inner sep=1pt] {scope assumptions} (p9.north);
+\draw[->] (p9.east) -- node[above, align=center, fill=white, inner sep=1pt] {per-property outcomes\\+ timings} (p10.west);
+\end{tikzpicture}
+\caption{End-to-end safety verification pipeline from CLI/API entry to CHC construction, solver querying, and result delivery. Each stage is annotated with its primary file-level owner.}
+\label{fig:end_to_end_pipeline}
+\end{figure}
+
 \subsection*{File-wise Implementation Details}
 \textbf{1. \texttt{CHC-Verification/variable\_name\_detection\_in\_IR.py}}
 Extracts user variables and internal repeat counters from linear IR. Also defines optimization-level controls that are consumed during CHC generation.
@@ -57,8 +149,8 @@ Assertions are encoded as hard safety obligations rather than advisory checks: f
 
 \textbf{5. \texttt{CHC-Verification/safety\_properties.py}}
 Implements the top-level API \texttt{CHC\_Verification(...)}. It validates inputs, parses hints, applies scope guards, checks heading-grid safety, evaluates user properties, and returns structured outcomes.
-Each user property is evaluated inside a controlled \texttt{eval()} context populated with the current Z3 state variables, so property strings can reference program variables by name without requiring the caller to import Z3 directly.
-The return object \texttt{ReturnValue} bundles an overall verdict (\texttt{SUCCESS}, \texttt{ERROR}, or \texttt{UNKNOWN}), a separate \texttt{heading\_grid\_safe} field, wall-clock build and solve timings, and three property lists (\texttt{passing}, \texttt{failing}, \texttt{unknown}), making outcomes fully machine-readable for downstream test harnesses.
+Each user property is evaluated inside an \texttt{eval()} context populated with the current Z3 state variables, so property strings can reference program variables by name without requiring the caller to import Z3 directly.
+The return object \texttt{ReturnValue} bundles an overall verdict (\texttt{SUCCESS}, \texttt{ERROR}, or \texttt{UNKNOWN}), a separate \texttt{heading\_grid\_safe} field, wall-clock build and solve timings, and three property lists (\texttt{passing}, \texttt{failing}, \texttt{unknown}).
 This module also contains a small robustness layer around SPACER queries. The helper \texttt{safe\_fp\_query()} retries a query with \texttt{spacer.native\_mbp=False} when Z3 raises the known \texttt{mbp to-real} exception on mixed Int/Real reasoning, and \texttt{guard\_check()} proactively disables native MBP before reachability checks. This does not change the logical encoding, but it makes the verifier materially more stable on geometry-heavy benchmarks.
 
 \textbf{6. \texttt{CHC-Verification/heading\_grid.py}}
@@ -69,7 +161,7 @@ This predicate is also the conclusion of the \texttt{BadHeading} violation rules
 \textbf{7. \texttt{CHC-Verification/optimization\_helpers.py}}
 Implements static turn-safety reasoning, repeat-loop detection, summarizability checks, and exact 15-degree trig tables used by optimized rule generation.
 The precomputed \texttt{\_MULT15\_VALUES} dictionary maps each of the 24 valid headings to exact integer \(\Delta x\) and \(\Delta y\) displacements scaled to avoid fractions, so movement rules submitted to SPACER contain only integer arithmetic and require no real-valued reasoning.
-The \texttt{is\_summarizable\_loop()} predicate enforces structural constraints—constant loop bound, no nested jumps, no pen-state changes—so that the summarization in \texttt{step\_rules.py} is provably sound: every concrete execution through the loop is covered by the emitted summary transition.
+The \texttt{is\_summarizable\_loop\_nested()} predicate enforces structural constraints - a positive constant loop bound within \texttt{MAX\_SUMMARIZE\_ITERATIONS}, no \texttt{AssertCommand} nodes, only unit jumps except for supported if/else shapes, and no use of the loop counter inside the body (already summarized inner loops are treated as atomic) - so that the summarization in \texttt{step\_rules.py} is provably sound: every concrete execution through the loop is covered by the emitted summary transition.
 
 \textbf{8. \texttt{CHC-Verification/semantic\_properties.py}}
 Provides a user-facing helper-string transpilation layer that lowers readable semantic helpers into raw CHC-compatible property expressions without modifying the core verifier.
@@ -88,7 +180,7 @@ The companion entry point \texttt{CHC\_Verification\_semantic()} wraps \texttt{C
     \item \textbf{Single global invariant relation \texttt{Inv(pc, xcor, ycor, heading, pendown, vars, counters)}.}
     Full control-and-data state is captured in one unified relation shared across initialization, all transition rules, and every property query.
     \begin{itemize}[leftmargin=1.5em, noitemsep, topsep=2pt]
-        \item \noindent\textit{\small \texttt{Benefit:}} \texttt{pc} governs control-flow and termination, geometric variables support spatial predicates, and loop counters make repeat semantics explicit without unrolling; all pipeline stages speak the same signature.
+        \item \noindent\textit{\small \texttt{Benefit:}} \texttt{pc} governs control-flow and termination, geometric variables support spatial predicates, and loop counters make repeat semantics explicit without unrolling; all pipeline stages have this signature.
         \item \noindent\textit{\small \texttt{Tradeoff:}} Properties over a strict variable subset still incur full-arity SPACER reasoning; adding any new state component requires regenerating the entire relation signature and all registered rules.
     \end{itemize}
     \item \textbf{Strict heading lattice with explicit \texttt{BadHeading} relation.}
