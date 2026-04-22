@@ -143,7 +143,7 @@ The same module also normalizes and validates \texttt{input\_ranges} for univers
 
 \textbf{4. \texttt{CHC-Verification/step\_rules.py}}
 Translates each IR instruction into CHC transition rules. It covers assignments, conditionals, movement, heading updates, pen-state updates, assertions, and control-flow jumps. This module is also where optimization-aware rule paths and loop summarization hooks are integrated.
-For movement instructions, the rule encodes exact integer arithmetic for heading multiples of 15 degrees by consulting the precomputed trigonometric table in \texttt{optimization\_helpers.py}, avoiding floating-point imprecision in the symbolic encoding.
+For movement instructions, the rule encodes integer arithmetic, other than xcor and ycor for heading multiples of 15 degrees by consulting the precomputed trigonometric table in \texttt{optimization\_helpers.py}, avoiding floating-point imprecision in the symbolic encoding.
 In \texttt{BASIC} optimization mode, loops that pass the summarizability check are replaced by a single aggregate transition via \texttt{summarize\_loop\_effect()}, reducing the clause count submitted to SPACER and improving convergence on loop-heavy programs while leaving non-summarizable fragments on the standard per-instruction path.
 Assertions are encoded as hard safety obligations rather than advisory checks: for an \texttt{AssertCommand}, the true branch advances normally, while the false branch implies \texttt{False} in the fixedpoint system. This turns assertion failure directly into reachability of an inconsistent state, so violated assertions are handled by the same CHC safety machinery as user-supplied properties.
 
