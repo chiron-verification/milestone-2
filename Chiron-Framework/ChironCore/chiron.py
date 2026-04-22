@@ -27,6 +27,7 @@ import submissionAI as AISub
 from sbflSubmission import computeRanks
 import csv
 from safety_properties import CHC_Verification, ReturnError
+from semantic_properties import CHC_Verification_semantic
 from variable_name_detection_in_IR import OptimizationLevel
 
 
@@ -476,7 +477,7 @@ if __name__ == "__main__":
         opt = OptimizationLevel.BASIC if args.chcOpt == "BASIC" else OptimizationLevel.NONE
         params_str = str(args.params) if args.params and args.chcMode == "specific" else None
 
-        result = CHC_Verification(
+        result = CHC_Verification_semantic(
             file_name=args.progfl,
             mode=args.chcMode,
             user_properties=props,

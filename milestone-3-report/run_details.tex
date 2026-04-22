@@ -242,7 +242,7 @@ python chiron.py -chc [options] <program.tl>
 
 \noindent\textbf{CHC-specific flags.}
 
-\begin{longtable}{p{3.0cm} p{2.8cm} p{9.3cm}}
+\begin{longtable}{p{3.0cm} p{2.2cm} p{10.5cm}}
 \toprule
 \textbf{Flag} & \textbf{Default} & \textbf{Description} \\
 \midrule
@@ -251,7 +251,7 @@ python chiron.py -chc [options] <program.tl>
 \addlinespace
 \texttt{-chc\_mode} & \texttt{default} & Verification mode. Choices: \texttt{default}, \texttt{specific}, \texttt{universal}. \\
 \addlinespace
-\texttt{-chc\_props} & \textit{(none)} & Properties to verify, as a semicolon-separated list of \texttt{name:expr} pairs. \texttt{name} is a label; \texttt{expr} is a Z3-style Python expression over program variables (without the \texttt{:} prefix). Example: \mbox{\texttt{"x\_pos:x >= 0;y\_bound:y <= 100"}}. No properties runs the heading-grid check only. \\
+\texttt{-chc\_props} & \textit{(none)} & Properties to verify, as a semicolon-separated list of \texttt{name:expr} pairs. \texttt{name} is a label; \texttt{expr} may be a raw Z3-style expression (e.g.\ \texttt{x >= 0}) \emph{or} a semantic helper call (e.g.\ \texttt{is\_nonnegative(x)}, \texttt{position\_in\_box(-100,100,-100,100)}); both are accepted and helper calls are transpiled automatically. Variable names omit the \texttt{:} prefix. Example: \mbox{\texttt{"x\_pos:is\_nonnegative(x);y\_bound:y <= 100"}}. Omitting this flag runs the heading-grid check only. \\
 \addlinespace
 \texttt{-chc\_scope} & \texttt{all} & Property scope. Choices: \texttt{all}, \texttt{terminating}, \texttt{at\_pc}, \texttt{upto\_pc}. \\
 \addlinespace
