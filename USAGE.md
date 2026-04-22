@@ -167,8 +167,10 @@ python3 chiron.py -chc [CHC_FLAGS...] <program.tl>
 
 - Properties:
   - Format: `-chc_props "name1:expr1;name2:expr2"`
-  - Example: `-chc_props "x_nonneg:x >= 0;heading_ok:heading % 15 == 0"`
+  - Example (raw Z3-style): `-chc_props "x_nonneg:x >= 0;heading_ok:heading % 15 == 0"`
+  - Example (semantic helpers): `-chc_props "x_nonneg:is_nonnegative(x);box:position_in_box(-100,100,-100,100)"`
   - Use unprefixed variable names in expressions (`x`, `y`, `xcor`, `heading`, ...), not `:x`.
+  - Semantic helper functions (e.g. `is_nonnegative`, `position_in_box`, `heading_cardinal`, `relation_guarded`) are accepted and transpiled automatically; raw Z3-style expressions also pass through unchanged.
 
 - Params (for `specific` mode):
   - Format: `-d "{':var1': value1, ':var2': value2}"`
@@ -196,7 +198,6 @@ python3 chiron.py -chc [CHC_FLAGS...] <program.tl>
 ### CLI Limits vs Python API
 
 - `input_ranges` is currently Python-only; `chiron.py` does not expose a CHC flag for it.
-- `CHC_Verification_semantic(...)` is also Python-only from current CLI path; CLI invokes `CHC_Verification(...)` directly.
 
 ### Output Produced by CHC CLI Path
 

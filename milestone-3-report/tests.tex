@@ -668,54 +668,15 @@ BASIC+H2 & 44 & 0 &  8 & 85\% & 1.780 & 0.175 \\
 \end{tabular}
 \end{table}
 
-% %% ---
-% \subsubsection*{Analysis}
+\subsubsection*{How to Run}
 
-% \paragraph{Effect of optimisation level.}
-% The \texttt{BASIC} optimisation level consistently dominates \texttt{NONE} for tight-bound and
-% property-complexity queries, delivering speedups of $10$--$55\times$ in default and specific modes.
-% The improvement stems from the BASIC encoder's tighter CHC structure, which lets \textsc{Spacer}
-% find inductive invariants faster when the target property is a precise arithmetic bound.  For
-% trivially falsifiable queries (\textit{violated} properties) the gain is smaller but still
-% substantial ($4$--$40\times$), since counterexample search is less sensitive to invariant quality.
+The correctness suite is driven by \texttt{pytest} from the \texttt{CHC-Verification/correctness\_tests/} directory.
+Parallel execution via \texttt{pytest-xdist} (\texttt{-n auto}) is recommended.
 
-% \paragraph{Effect of hints.}
-% H1 (\texttt{check\_heading\_always\_on\_grid}) provides a modest build-time overhead (one extra
-% CHC query) but reduces solve times for heading-heavy programs: e.g.\ \texttt{turns\_20}
-% \texttt{heading\_grid\_24} drops from $1.59$\,s to $0.17$\,s ($9.4\times$) in default mode.
-% H2 (\texttt{heading\_on\_grid\_always}) achieves comparable or greater solve-time reductions at
-% zero additional query cost; however, it is unsound for programs whose heading leaves the
-% 15-degree grid, so H1 is the safer default.  For non-heading properties both hints have
-% negligible effect.
+\begin{lstlisting}[style=terminal, language=bash]
+# runs all tests in parallel
+pytest -n auto -q 
 
-% \paragraph{Scalability across modes.}
-% Universal mode is the hardest: with \texttt{NONE} optimisation, 26\% of test cases time out.
-% \texttt{BASIC} eliminates all timeouts in universal mode (100\% completion) by generating a
-% compact fixed-point system that \textsc{Spacer} can close.  Default and specific modes are
-% similarly cured by \texttt{BASIC}, leaving only the two structurally hard cases
-% (\texttt{wide\_vars h\_tight} in default and \texttt{s\_branches acc\_tight} in specific) that
-% time out under \texttt{NONE} regardless of hint.
-
-% \paragraph{Timeout cases.}
-% Two benchmarks hit the 20\,s ceiling across all six configurations under at least one mode.
-% Both involve either a large disjunctive state space (\texttt{s\_branches acc\_tight}) or
-% simultaneous heading normalisation and trigonometric approximation
-% (\texttt{wide\_vars h\_tight} under \texttt{NONE}).  These are solver scalability limits, not
-% encoding defects; the CHC rules are well-formed and the properties are correctly stated.
-
-% %% ---
-% \subsubsection*{Running the Performance Tests}
-
-% \begin{lstlisting}[style=terminal, language=bash]
-% cd CHC-Verification/performance_tests
-% pytest test_default.py -v      # Default mode benchmarks
-% pytest test_universal.py -v    # Universal mode benchmarks
-% pytest test_specific.py -v     # Specific mode benchmarks
-
-% # Parallel execution (requires pytest-xdist)
-% pytest -n auto test_default.py
-% \end{lstlisting}
-
-% \noindent Results are written to \texttt{perf\_results\_\{default,universal,specific\}.csv}
-% for analysis.  Each row records \texttt{verdict\_*} (raw solver output) and \texttt{result\_*}
-% (pass/skip/fail relative to expected outcome) for all six configurations.
+# one module only
+pytest -n auto -q <test_module.py>
+\end{lstlisting}
