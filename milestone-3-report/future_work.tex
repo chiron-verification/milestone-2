@@ -1,4 +1,14 @@
-\section*{Future Work}
+\section*{Strengths}
+The current verifier already has several strong outcomes:
+\begin{enumerate}
+    \item \textbf{End-to-end verification pipeline.} The implementation connects parsing, CHC generation, SPACER-based solving, and structured reporting through a usable API/CLI interface.
+    \item \textbf{Strong correctness coverage.} The test suite covers all three modes plus semantic helpers with 64 shared fixture programs and 358 correctness tests, with 357 passing, 0 failing, and 1 timeout.
+    \item \textbf{Practical optimisation impact.} The BASIC optimisation pipeline (turn-safety analysis + loop summarisation) materially improves scalability, rescuing a net 48 timed-out benchmarks and reaching 100\% completion in Universal mode.
+    \item \textbf{User-oriented specification support.} Semantic helper properties and explicit scopes/hints make the verifier easier to adopt without weakening the underlying CHC safety checks.
+\end{enumerate}
+
+\section*{Limitations \& Future Work}
+
 Future work to make the verifier stronger and easier to use includes:
 \begin{enumerate}
     \item \textbf{ML-guided verification.} Many results become \texttt{UNKNOWN} because hints and solver settings are fixed. A useful next step is to use lightweight ML models over IR features (loop depth, branching, variable count, and property form) to choose hints, timeout values, and optimization levels automatically. This can reduce failed runs and improve solver performance on different program families.
